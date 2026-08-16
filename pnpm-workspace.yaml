@@ -1,0 +1,8 @@
+# pnpm blocks dependency build scripts until they are named here, and refuses to
+# run while any are left undecided. Every entry below is an explicit decision.
+allowBuilds:
+  # Next usa sharp para optimizar imágenes en producción. Sin él arranca, pero
+  # advierte y cae a un camino más lento.
+  sharp: true
+  # Binario nativo del resolvedor que usa el stack de eslint.
+  unrs-resolver: true
