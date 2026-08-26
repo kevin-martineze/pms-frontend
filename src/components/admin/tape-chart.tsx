@@ -7,15 +7,16 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { CHANNEL_COMMISSION, PAYMENT_CLASS, STATUS_CLASS } from "@/components/admin/labels";
 import {
-  CHANNEL_LABEL,
-  CHANNEL_COMMISSION,
-  PAYMENT_CLASS,
-  PAYMENT_LABEL,
-  STATUS_CLASS,
-  STATUS_LABEL,
-} from "@/components/admin/labels";
-import { addDays, diffNights, formatDate, formatMoney, formatWeekday, isWeekend, parseIsoDate } from "@/lib/format";
+  diffNights,
+  formatDate,
+  formatMoney,
+  formatWeekday,
+  isWeekend,
+  parseIsoDate,
+} from "@/lib/format";
+import { useI18n } from "@/lib/i18n/provider";
 import type { IsoDate, Reservation } from "@/lib/domain/types";
 import { cn } from "@/lib/utils";
 
@@ -70,12 +71,20 @@ export function TapeChart({
   windowEnd: IsoDate;
   today: IsoDate;
 }) {
+  const { t, intlTag } = useI18n();
   const scroller = React.useRef<HTMLDivElement>(null);
   const [selected, setSelected] = React.useState<Reservation | null>(null);
 
   const days = React.useMemo(() => {
     const out: IsoDate[] = [];
-    for (let d = windowStart; d < windowEnd; d = addDays(d, 1)) out.push(d);
+    for (let d = windowStart; d < windowEnd; ) {
+      out.push(d);
+      const date = parseIsoDate(d);
+      date.setDate(date.getDate() + 1);
+      d = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(
+        date.getDate(),
+      ).padStart(2, "0")}`;
+    }
     return out;
   }, [windowStart, windowEnd]);
 
@@ -88,36 +97,38 @@ export function TapeChart({
     scroller.current.scrollLeft = Math.max(0, (todayIndex - 2) * COL);
   }, [todayIndex]);
 
-  function scrollBy(days: number) {
-    scroller.current?.scrollBy({ left: days * COL, behavior: "smooth" });
+  function scrollBy(count: number) {
+    scroller.current?.scrollBy({ left: count * COL, behavior: "smooth" });
   }
 
   function goToToday() {
     scroller.current?.scrollTo({ left: Math.max(0, (todayIndex - 2) * COL), behavior: "smooth" });
   }
 
+  const legend = [
+    ["in-house", t.admin.calendar.legendInHouse],
+    ["confirmed", t.admin.calendar.legendConfirmed],
+    ["pending", t.admin.calendar.legendPending],
+    ["checked-out", t.admin.calendar.legendCheckedOut],
+  ] as const;
+
   return (
     <>
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <Button variant="outline" size="icon" onClick={() => scrollBy(-7)} className="size-8">
           <ChevronLeft className="size-4" aria-hidden />
-          <span className="sr-only">Semana anterior</span>
+          <span className="sr-only">{t.admin.calendar.previousWeek}</span>
         </Button>
         <Button variant="outline" size="sm" onClick={goToToday}>
-          Hoy
+          {t.admin.calendar.goToday}
         </Button>
         <Button variant="outline" size="icon" onClick={() => scrollBy(7)} className="size-8">
           <ChevronRight className="size-4" aria-hidden />
-          <span className="sr-only">Semana siguiente</span>
+          <span className="sr-only">{t.admin.calendar.nextWeek}</span>
         </Button>
 
         <ul className="ml-auto flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-muted-foreground">
-          {[
-            ["in-house", "En casa"],
-            ["confirmed", "Confirmada"],
-            ["pending", "Por confirmar"],
-            ["checked-out", "Salió"],
-          ].map(([key, label]) => (
+          {legend.map(([key, label]) => (
             <li key={key} className="flex items-center gap-1.5">
               <span className={cn("size-2.5 rounded-sm", BAR_CLASS[key])} aria-hidden />
               {label}
@@ -128,7 +139,7 @@ export function TapeChart({
               className="size-2.5 rounded-sm border border-border bg-[repeating-linear-gradient(45deg,transparent,transparent_2px,var(--muted-foreground)_2px,var(--muted-foreground)_4px)]"
               aria-hidden
             />
-            Bloqueada
+            {t.admin.calendar.legendBlocked}
           </li>
         </ul>
       </div>
@@ -141,7 +152,7 @@ export function TapeChart({
               className="flex items-end border-b border-border px-3 pb-1.5 text-[0.65rem] uppercase tracking-[0.12em] text-muted-foreground"
               style={{ height: 46, width: 158 }}
             >
-              Habitación
+              {t.admin.calendar.roomColumn}
             </div>
             {rows.map((row) => (
               <div
@@ -174,7 +185,7 @@ export function TapeChart({
                       )}
                     >
                       <span className="uppercase text-muted-foreground">
-                        {formatWeekday(day).slice(0, 2)}
+                        {formatWeekday(day, intlTag).slice(0, 2)}
                       </span>
                       <span className={cn("tnum text-xs", isToday && "font-semibold")}>
                         {parseIsoDate(day).getDate()}
@@ -206,13 +217,19 @@ export function TapeChart({
                   {row.blocked && (
                     <div
                       className="pointer-events-none absolute inset-y-1 left-0 right-0 rounded bg-[repeating-linear-gradient(45deg,transparent,transparent_5px,var(--border)_5px,var(--border)_10px)]"
-                      title="Habitación bloqueada por mantenimiento"
+                      title={t.admin.calendar.blockedTitle}
                     />
                   )}
 
                   {row.reservations.map((reservation) => {
-                    const startIndex = Math.max(0, diffNights(windowStart, reservation.range.checkIn));
-                    const endIndex = Math.min(days.length, diffNights(windowStart, reservation.range.checkOut));
+                    const startIndex = Math.max(
+                      0,
+                      diffNights(windowStart, reservation.range.checkIn),
+                    );
+                    const endIndex = Math.min(
+                      days.length,
+                      diffNights(windowStart, reservation.range.checkOut),
+                    );
                     if (endIndex <= 0 || startIndex >= days.length) return null;
 
                     const left = startIndex * COL + COL / 2;
@@ -229,7 +246,10 @@ export function TapeChart({
                           "absolute flex items-center gap-1.5 overflow-hidden rounded-md px-2 text-left text-[0.7rem] font-medium transition-[filter] hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring",
                           BAR_CLASS[reservation.status] ?? "bg-muted",
                         )}
-                        title={`${reservation.guest.name} · ${formatDate(reservation.range.checkIn)} → ${formatDate(reservation.range.checkOut)}`}
+                        title={`${reservation.guest.name} · ${formatDate(
+                          reservation.range.checkIn,
+                          intlTag,
+                        )} → ${formatDate(reservation.range.checkOut, intlTag)}`}
                       >
                         {reservation.balance.amountMinor > 0 && (
                           <TriangleAlert className="size-3 shrink-0 opacity-90" aria-hidden />
@@ -257,6 +277,9 @@ function ReservationSheet({
   reservation: Reservation | null;
   onClose: () => void;
 }) {
+  const { t, intlTag } = useI18n();
+  const s = t.admin.calendar.sheet;
+
   return (
     <Sheet open={reservation !== null} onOpenChange={(open) => !open && onClose()}>
       <SheetContent side="right" className="w-full gap-0 sm:max-w-md">
@@ -274,38 +297,47 @@ function ReservationSheet({
             <div className="flex-1 space-y-5 overflow-y-auto px-5 py-5">
               <div className="flex flex-wrap gap-2">
                 <Badge variant="outline" className={STATUS_CLASS[reservation.status]}>
-                  {STATUS_LABEL[reservation.status]}
+                  {t.admin.status[reservation.status]}
                 </Badge>
                 <Badge variant="outline" className={PAYMENT_CLASS[reservation.payment]}>
-                  {PAYMENT_LABEL[reservation.payment]}
+                  {t.admin.payment[reservation.payment]}
                 </Badge>
                 {reservation.guest.previousStays > 0 && (
                   <Badge variant="secondary">
-                    {reservation.guest.previousStays + 1}ª estancia
+                    {t.admin.dashboard.nthStay(reservation.guest.previousStays + 1)}
                   </Badge>
                 )}
               </div>
 
               <dl className="space-y-3 text-sm">
-                <Item term="Habitación" detail={`${reservation.room} · ${reservation.nights} noches`} />
-                <Item term="Entrada" detail={`${formatDate(reservation.range.checkIn)} · 15:00`} />
-                <Item term="Salida" detail={`${formatDate(reservation.range.checkOut)} · 11:00`} />
                 <Item
-                  term="Huéspedes"
-                  detail={`${reservation.adults} adultos${reservation.children ? ` · ${reservation.children} niños` : ""}`}
+                  term={s.room}
+                  detail={s.nightsInRoom(reservation.room ?? "—", reservation.nights)}
                 />
-                <Item term="Canal" detail={CHANNEL_LABEL[reservation.channel]} />
-                <Item term="País" detail={reservation.guest.country} />
-                <Item term="Reservó" detail={formatDate(reservation.createdAt)} />
+                <Item
+                  term={s.checkIn}
+                  detail={`${formatDate(reservation.range.checkIn, intlTag)} · 15:00`}
+                />
+                <Item
+                  term={s.checkOut}
+                  detail={`${formatDate(reservation.range.checkOut, intlTag)} · 11:00`}
+                />
+                <Item
+                  term={s.guests}
+                  detail={s.adultsChildren(reservation.adults, reservation.children)}
+                />
+                <Item term={s.channel} detail={t.admin.channels[reservation.channel]} />
+                <Item term={s.country} detail={reservation.guest.country} />
+                <Item term={s.bookedOn} detail={formatDate(reservation.createdAt, intlTag)} />
               </dl>
 
               <Separator />
 
               <dl className="space-y-3 text-sm">
-                <Item term="Total" detail={formatMoney(reservation.total)} strong />
+                <Item term={s.total} detail={formatMoney(reservation.total, intlTag)} strong />
                 <Item
-                  term="Saldo pendiente"
-                  detail={formatMoney(reservation.balance)}
+                  term={s.balance}
+                  detail={formatMoney(reservation.balance, intlTag)}
                   tone={reservation.balance.amountMinor > 0 ? "warning" : "ok"}
                 />
                 {/* La comisión se muestra siempre, incluso cuando es cero. Ver el
@@ -313,16 +345,20 @@ function ReservationSheet({
                     entero de la estrategia comercial, y no se puede ver si sólo
                     aparece cuando hay comisión que pagar. */}
                 <Item
-                  term="Comisión del canal"
+                  term={s.commission}
                   detail={
                     CHANNEL_COMMISSION[reservation.channel] === 0
-                      ? "$0 — canal propio"
-                      : `${formatMoney({
-                          amountMinor: Math.round(
-                            reservation.total.amountMinor * CHANNEL_COMMISSION[reservation.channel],
-                          ),
-                          currency: reservation.total.currency,
-                        })} (${Math.round(CHANNEL_COMMISSION[reservation.channel] * 100)}%)`
+                      ? s.ownChannel
+                      : `${formatMoney(
+                          {
+                            amountMinor: Math.round(
+                              reservation.total.amountMinor *
+                                CHANNEL_COMMISSION[reservation.channel],
+                            ),
+                            currency: reservation.total.currency,
+                          },
+                          intlTag,
+                        )} (${Math.round(CHANNEL_COMMISSION[reservation.channel] * 100)}%)`
                   }
                   tone={CHANNEL_COMMISSION[reservation.channel] === 0 ? "ok" : "warning"}
                 />
@@ -331,7 +367,7 @@ function ReservationSheet({
               <Separator />
 
               <div className="space-y-1 text-sm">
-                <p className="text-muted-foreground">Contacto</p>
+                <p className="text-muted-foreground">{s.contact}</p>
                 <p>{reservation.guest.email}</p>
                 <p className="tnum">{reservation.guest.phone}</p>
               </div>
@@ -339,13 +375,13 @@ function ReservationSheet({
 
             <div className="grid gap-2 border-t border-border p-4 sm:grid-cols-2">
               <Button variant="outline" className="gap-2" asChild>
-                <a href={`https://wa.me/${reservation.guest.phone.replace(/\D/g, "")}`}>
+                <a href={`https://wa.me/${reservation.guest.phone.replace(/[^0-9]/g, "")}`}>
                   <MessageCircle className="size-4" aria-hidden />
-                  WhatsApp
+                  {t.common.whatsapp}
                 </a>
               </Button>
               <Button>
-                {reservation.status === "confirmed" ? "Registrar entrada" : "Editar reserva"}
+                {reservation.status === "confirmed" ? s.checkInCta : s.editCta}
               </Button>
             </div>
           </>

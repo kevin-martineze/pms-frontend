@@ -4,7 +4,7 @@ import type { IsoDate, Money } from "@/lib/domain/types";
  * Panamá usa el dólar (el balboa circula a la par y sólo en monedas), así que
  * USD es la moneda real del negocio, no un placeholder.
  */
-export function formatMoney(money: Money, locale = "es-PA"): string {
+export function formatMoney(money: Money, locale = "en-US"): string {
   return new Intl.NumberFormat(locale, {
     style: "currency",
     currency: money.currency,
@@ -57,7 +57,7 @@ export function diffNights(from: IsoDate, to: IsoDate): number {
   return Math.round(ms / 86_400_000);
 }
 
-export function formatDate(iso: IsoDate, locale = "es-PA"): string {
+export function formatDate(iso: IsoDate, locale = "en-US"): string {
   return new Intl.DateTimeFormat(locale, {
     day: "numeric",
     month: "short",
@@ -65,19 +65,20 @@ export function formatDate(iso: IsoDate, locale = "es-PA"): string {
   }).format(parseIsoDate(iso));
 }
 
-export function formatDateShort(iso: IsoDate, locale = "es-PA"): string {
+export function formatDateShort(iso: IsoDate, locale = "en-US"): string {
   return new Intl.DateTimeFormat(locale, {
     day: "numeric",
     month: "short",
   }).format(parseIsoDate(iso));
 }
 
-export function formatRange(range: { checkIn: IsoDate; checkOut: IsoDate }): string {
-  return `${formatDateShort(range.checkIn)} — ${formatDateShort(range.checkOut)}`;
+export function formatWeekday(iso: IsoDate, locale = "en-US"): string {
+  return new Intl.DateTimeFormat(locale, { weekday: "short" }).format(parseIsoDate(iso));
 }
 
-export function formatWeekday(iso: IsoDate, locale = "es-PA"): string {
-  return new Intl.DateTimeFormat(locale, { weekday: "short" }).format(parseIsoDate(iso));
+/** Inicial del día, para encabezados de columna muy estrechos. */
+export function formatWeekdayNarrow(iso: IsoDate, locale = "en-US"): string {
+  return new Intl.DateTimeFormat(locale, { weekday: "narrow" }).format(parseIsoDate(iso));
 }
 
 export function isWeekend(iso: IsoDate): boolean {
@@ -85,10 +86,6 @@ export function isWeekend(iso: IsoDate): boolean {
   return day === 0 || day === 5 || day === 6;
 }
 
-export function pluralNights(n: number): string {
-  return n === 1 ? "1 noche" : `${n} noches`;
-}
-
-export function pluralGuests(n: number): string {
-  return n === 1 ? "1 huésped" : `${n} huéspedes`;
-}
+/* Los plurales viven en los diccionarios de `src/lib/i18n`, no aquí: "1 noche"
+   contra "1 night" no es formato, es traducción, y una función que devuelve
+   texto en un idioma fijo es exactamente lo que rompe un sitio multilingüe. */

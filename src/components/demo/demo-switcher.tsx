@@ -1,9 +1,11 @@
 "use client";
 
-import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { BedDouble, FileText, LayoutDashboard } from "lucide-react";
 
+import { LocaleLink } from "@/components/locale-link";
+import { useI18n } from "@/lib/i18n/provider";
+import { withLocale } from "@/lib/i18n/paths";
 import { cn } from "@/lib/utils";
 
 /**
@@ -16,41 +18,62 @@ import { cn } from "@/lib/utils";
  * No forma parte del producto: cuando esto pase a producción, se borra el
  * componente y nada más se entera.
  */
-
-const TABS = [
-  { href: "/", label: "Sitio", icon: BedDouble, match: (p: string) => !p.startsWith("/admin") && p !== "/propuesta" },
-  { href: "/admin", label: "Sistema", icon: LayoutDashboard, match: (p: string) => p.startsWith("/admin") },
-  { href: "/propuesta", label: "Propuesta", icon: FileText, match: (p: string) => p === "/propuesta" },
-];
-
 export function DemoSwitcher() {
   const pathname = usePathname();
+  const { t, locale } = useI18n();
+
+  /* La ruta ya viene con el idioma adentro, así que la comparación se hace
+     contra el camino sin ese prefijo. */
+  const path = pathname.replace(/^\/[a-z]{2}(?=\/|$)/, "") || "/";
+
+  const tabs = [
+    {
+      href: "/",
+      label: t.demo.site,
+      icon: BedDouble,
+      active: !path.startsWith("/admin") && path !== "/proposal",
+    },
+    {
+      href: "/admin",
+      label: t.demo.system,
+      icon: LayoutDashboard,
+      active: path.startsWith("/admin"),
+    },
+    {
+      href: "/proposal",
+      label: t.demo.proposal,
+      icon: FileText,
+      active: path === "/proposal",
+    },
+  ];
 
   return (
     <div className="pointer-events-none fixed inset-x-0 bottom-4 z-50 flex justify-center px-4 print:hidden">
       <nav
-        aria-label="Cambiar de vista en la demostración"
+        aria-label={t.demo.switchView}
         className="pointer-events-auto flex items-center gap-1 rounded-full border border-white/10 bg-palm-deep/95 p-1 shadow-lg shadow-black/25 backdrop-blur"
       >
         <span className="px-3 text-[0.6rem] font-medium uppercase tracking-[0.18em] text-white/45">
-          Demo
+          {t.demo.label}
         </span>
-        {TABS.map((tab) => {
-          const active = tab.match(pathname);
+        {tabs.map((tab) => {
           const Icon = tab.icon;
           return (
-            <Link
+            <LocaleLink
               key={tab.href}
               href={tab.href}
-              aria-current={active ? "page" : undefined}
+              aria-current={tab.active ? "page" : undefined}
               className={cn(
                 "flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors",
-                active ? "bg-butter text-palm-deep" : "text-white/70 hover:bg-white/10 hover:text-white",
+                tab.active
+                  ? "bg-butter text-palm-deep"
+                  : "text-white/70 hover:bg-white/10 hover:text-white",
               )}
+              title={withLocale(locale, tab.href)}
             >
               <Icon className="size-3.5" aria-hidden />
               {tab.label}
-            </Link>
+            </LocaleLink>
           );
         })}
       </nav>

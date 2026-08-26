@@ -1,5 +1,6 @@
 import type { IsoDate, Quote, Unit, UnitAvailability } from "@/lib/domain/types";
-import { addDays, diffNights, isWeekend, money } from "@/lib/format";
+import { addDays, diffNights, isWeekend, toIsoDate } from "@/lib/format";
+import { composeQuote, type QuoteLabels } from "@/lib/quote";
 import { unitById } from "@/lib/mock/property";
 import { reservations } from "@/lib/mock/reservations";
 import { seasonFor } from "@/lib/mock/operations";
@@ -50,10 +51,7 @@ export function availabilityFor(unit: Unit, checkIn: IsoDate, checkOut: IsoDate)
 
 /** Noches sueltas ocupadas en los próximos 90 días — alimenta el calendario. */
 export function blockedDatesAhead(unit: Unit, days = 120): IsoDate[] {
-  const today = new Date();
-  const start = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(
-    today.getDate(),
-  ).padStart(2, "0")}`;
+  const start = toIsoDate(new Date());
   const out: IsoDate[] = [];
   for (let i = 0; i < days; i++) {
     const date = addDays(start, i);
@@ -76,74 +74,54 @@ export function nightlyRate(unit: Unit, date: IsoDate): number {
   return (unit.basePrice.amountMinor / 100) * seasonFactor * weekendFactor;
 }
 
-export type QuoteOptions = {
-  /** Descuento del canal propio. Es la palanca comercial de toda la propuesta. */
-  directDiscount?: boolean;
-};
+/** Las casas llevan limpieza única; en el hotel va dentro de la tarifa. */
+export function cleaningFeeFor(unit: Unit): number {
+  return unit.propertyId === "p-casas" ? 45 : 0;
+}
 
+/**
+ * Tabla de tarifas de una unidad, noche por noche.
+ *
+ * Es lo que el servidor le pasa al panel de reserva para que recalcule el total
+ * en el navegador sin volver a preguntar. Cuatro meses cubre de sobra el
+ * horizonte con el que reserva un huésped.
+ */
+export function ratesFor(unit: Unit, from: IsoDate, days = 150): Record<IsoDate, number> {
+  const rates: Record<IsoDate, number> = {};
+  for (let i = 0; i < days; i++) {
+    const date = addDays(from, i);
+    rates[date] = Math.round(nightlyRate(unit, date) * 100) / 100;
+  }
+  return rates;
+}
+
+/**
+ * Cotización del lado del servidor.
+ *
+ * Delega en `composeQuote` en vez de repetir la aritmética: dos implementaciones
+ * del mismo desglose acaban discrepando en un centavo, y el centavo aparece
+ * entre lo que el huésped vio al reservar y lo que dice su factura.
+ */
 export function quoteFor(
   unitId: string,
   checkIn: IsoDate,
   checkOut: IsoDate,
   guests: number,
-  options: QuoteOptions = {},
+  labels: QuoteLabels,
+  unitDisplayName?: string,
 ): Quote | null {
   const unit = unitById.get(unitId);
   if (!unit) return null;
 
-  const nights = diffNights(checkIn, checkOut);
-  if (nights <= 0) return null;
-
-  let accommodation = 0;
-  for (let i = 0; i < nights; i++) {
-    accommodation += nightlyRate(unit, addDays(checkIn, i));
-  }
-
-  const lines: Quote["lines"] = [
-    {
-      label: `${nights} ${nights === 1 ? "noche" : "noches"} × ${unit.name}`,
-      amount: money(round2(accommodation)),
-      kind: "nightly",
-    },
-  ];
-
-  if (options.directDiscount) {
-    lines.push({
-      label: "Descuento por reservar directo (7%)",
-      amount: money(-round2(accommodation * 0.07)),
-      kind: "discount",
-    });
-    accommodation *= 0.93;
-  }
-
-  /* Las casas llevan limpieza única; las habitaciones del hotel la traen dentro
-     de la tarifa porque camarería entra todos los días. */
-  const cleaning = unit.propertyId === "p-casas" ? 45 : 0;
-  if (cleaning > 0) {
-    lines.push({ label: "Limpieza final", amount: money(cleaning), kind: "fee" });
-  }
-
-  /* ITBMS de hospedaje en Panamá: 10%. Va desglosado siempre. */
-  const taxable = accommodation + cleaning;
-  const tax = taxable * 0.1;
-  lines.push({ label: "ITBMS (10%)", amount: money(round2(tax)), kind: "tax" });
-
-  const total = taxable + tax;
-
-  return {
+  return composeQuote({
     unitId,
-    range: { checkIn, checkOut },
+    unitName: unitDisplayName ?? unit.name,
+    rates: ratesFor(unit, checkIn, diffNights(checkIn, checkOut) + 1),
+    checkIn,
+    checkOut,
     guests,
-    nights,
-    lines,
-    total: money(round2(total)),
-    /* Depósito del 30% al reservar, resto en el check-in. Es lo que permite
-       operar sin bloquear el capital del huésped y sin quedar expuesto a un
-       no-show total. */
-    dueNow: money(round2(total * 0.3)),
-  };
-}
-
-function round2(value: number): number {
-  return Math.round(value * 100) / 100;
+    cleaningFee: cleaningFeeFor(unit),
+    directDiscount: true,
+    labels,
+  });
 }

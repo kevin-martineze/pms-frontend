@@ -14,7 +14,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { HK_TYPE_LABEL, ROOM_STATE_LABEL } from "@/lib/mock/operations";
+import { useI18n } from "@/lib/i18n/provider";
 import type { HousekeepingTask, StaffMember } from "@/lib/domain/types";
 import { cn } from "@/lib/utils";
 
@@ -44,29 +44,31 @@ export function HousekeepingBoard({
   tasks: HousekeepingTask[];
   cleaners: StaffMember[];
 }) {
+  const { t } = useI18n();
   const [done, setDone] = React.useState<Set<string>>(new Set());
   const [assignments, setAssignments] = React.useState<Record<string, string>>(() =>
-    Object.fromEntries(tasks.filter((t) => t.assignedTo).map((t) => [t.room, t.assignedTo!])),
+    Object.fromEntries(tasks.filter((task) => task.assignedTo).map((task) => [task.room, task.assignedTo!])),
   );
 
   const pending = tasks.filter(
-    (t) => (t.state === "departing" || t.state === "vacant-dirty") && !done.has(t.room),
+    (task) => (task.state === "departing" || task.state === "vacant-dirty") && !done.has(task.room),
   );
   const totalToClean = tasks.filter(
-    (t) => t.state === "departing" || t.state === "vacant-dirty",
+    (task) => task.state === "departing" || task.state === "vacant-dirty",
   ).length;
   const progress = totalToClean === 0 ? 100 : ((totalToClean - pending.length) / totalToClean) * 100;
+  const highPriority = pending.filter((task) => task.priority === "high").length;
 
   function markClean(task: HousekeepingTask) {
     setDone((prev) => new Set(prev).add(task.room));
-    toast.success(`Habitación ${task.room} lista`, {
-      description: "Recepción ya la puede entregar.",
+    toast.success(t.admin.housekeeping.cleanToast(task.room), {
+      description: t.admin.housekeeping.cleanToastBody,
     });
   }
 
   function assign(room: string, name: string) {
     setAssignments((prev) => ({ ...prev, [room]: name }));
-    toast(`Habitación ${room} asignada a ${name}`);
+    toast(t.admin.housekeeping.assignToast(room, name));
   }
 
   const sorted = [...tasks].sort((a, b) => {
@@ -80,17 +82,16 @@ export function HousekeepingBoard({
     <>
       <div className="rounded-xl border border-border bg-card p-5">
         <div className="flex flex-wrap items-baseline justify-between gap-3">
-          <p className="text-sm font-medium">Turno de la mañana</p>
+          <p className="text-sm font-medium">{t.admin.housekeeping.shift}</p>
           <p className="tnum text-sm text-muted-foreground">
-            {totalToClean - pending.length} de {totalToClean} habitaciones listas
+            {t.admin.housekeeping.progress(totalToClean - pending.length, totalToClean)}
           </p>
         </div>
         <Progress value={progress} className="mt-3 h-2" />
-        {pending.filter((t) => t.priority === "high").length > 0 && (
+        {highPriority > 0 && (
           <p className="mt-3 flex items-center gap-2 text-sm text-status-departing">
             <TriangleAlert className="size-4 shrink-0" aria-hidden />
-            {pending.filter((t) => t.priority === "high").length} con huésped llegando hoy — van
-            primero.
+            {t.admin.housekeeping.highPriority(highPriority)}
           </p>
         )}
       </div>
@@ -114,9 +115,11 @@ export function HousekeepingBoard({
             >
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <p className="tnum text-lg font-medium">Hab. {task.room}</p>
+                  <p className="tnum text-lg font-medium">
+                    {t.common.room} {task.room}
+                  </p>
                   <p className="mt-0.5 text-xs text-muted-foreground">
-                    {HK_TYPE_LABEL[task.type]}
+                    {t.admin.hkType[task.type]}
                   </p>
                 </div>
                 <Badge
@@ -127,19 +130,21 @@ export function HousekeepingBoard({
                       : "",
                   )}
                 >
-                  {isDone ? "Limpia" : ROOM_STATE_LABEL[task.state]}
+                  {isDone ? t.admin.housekeeping.clean : t.admin.roomState[task.state]}
                 </Badge>
               </div>
 
               {task.priority === "high" && needsCleaning && !isDone && (
                 <p className="mt-3 flex items-center gap-1.5 rounded-lg bg-status-departing/10 px-2.5 py-1.5 text-xs text-status-departing">
                   <Clock className="size-3.5 shrink-0" aria-hidden />
-                  Entra huésped hoy · ventana 11:00 – 15:00
+                  {t.admin.housekeeping.window}
                 </p>
               )}
 
-              {task.note && (
-                <p className="mt-3 text-xs text-muted-foreground">{task.note}</p>
+              {task.note === "maintenance-ac" && (
+                <p className="mt-3 text-xs text-muted-foreground">
+                  {t.admin.housekeeping.maintenanceNote}
+                </p>
               )}
 
               <div className="mt-4 flex items-center justify-between gap-3">
@@ -162,7 +167,9 @@ export function HousekeepingBoard({
                       ) : (
                         <>
                           <UserRound className="size-4 text-muted-foreground" aria-hidden />
-                          <span className="text-xs text-muted-foreground">Sin asignar</span>
+                          <span className="text-xs text-muted-foreground">
+                            {t.admin.housekeeping.unassigned}
+                          </span>
                         </>
                       )}
                     </Button>
@@ -182,12 +189,12 @@ export function HousekeepingBoard({
                 {needsCleaning && !isDone ? (
                   <Button size="sm" className="gap-1.5" onClick={() => markClean(task)}>
                     <Sparkles className="size-3.5" aria-hidden />
-                    Marcar limpia
+                    {t.admin.housekeeping.markClean}
                   </Button>
                 ) : isDone ? (
                   <span className="flex items-center gap-1.5 text-xs text-status-vacant-clean">
                     <Check className="size-3.5" aria-hidden />
-                    Lista
+                    {t.admin.housekeeping.ready}
                   </span>
                 ) : null}
               </div>

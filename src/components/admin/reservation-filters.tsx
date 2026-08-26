@@ -12,7 +12,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { CHANNEL_SHORT, PAYMENT_LABEL, STATUS_LABEL } from "@/components/admin/labels";
+import { withLocale } from "@/lib/i18n/paths";
+import { useI18n } from "@/lib/i18n/provider";
 
 /**
  * Filtros de la lista de reservas.
@@ -25,17 +26,17 @@ import { CHANNEL_SHORT, PAYMENT_LABEL, STATUS_LABEL } from "@/components/admin/l
 export function ReservationFilters({ total }: { total: number }) {
   const router = useRouter();
   const params = useSearchParams();
+  const { t, locale } = useI18n();
 
   function set(key: string, value: string | null) {
     const next = new URLSearchParams(params.toString());
     if (value && value !== "all") next.set(key, value);
     else next.delete(key);
-    router.replace(`/admin/reservations?${next.toString()}`, { scroll: false });
+    router.replace(withLocale(locale, `/admin/reservations?${next.toString()}`), { scroll: false });
   }
 
   const q = params.get("q") ?? "";
-  const active =
-    params.get("status") || params.get("payment") || params.get("channel") || q;
+  const active = params.get("status") || params.get("payment") || params.get("channel") || q;
 
   return (
     <div className="flex flex-wrap items-center gap-2">
@@ -46,20 +47,20 @@ export function ReservationFilters({ total }: { total: number }) {
         />
         <Input
           defaultValue={q}
-          placeholder="Nombre, referencia o habitación"
+          placeholder={t.admin.reservations.searchPlaceholder}
           className="pl-9"
-          aria-label="Buscar reservas"
+          aria-label={t.admin.reservations.searchLabel}
           onChange={(event) => set("q", event.target.value || null)}
         />
       </div>
 
       <Select value={params.get("status") ?? "all"} onValueChange={(v) => set("status", v)}>
         <SelectTrigger className="w-[10.5rem]">
-          <SelectValue placeholder="Estado" />
+          <SelectValue />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="all">Todos los estados</SelectItem>
-          {Object.entries(STATUS_LABEL).map(([value, label]) => (
+          <SelectItem value="all">{t.admin.reservations.allStatuses}</SelectItem>
+          {Object.entries(t.admin.status).map(([value, label]) => (
             <SelectItem key={value} value={value}>
               {label}
             </SelectItem>
@@ -69,11 +70,11 @@ export function ReservationFilters({ total }: { total: number }) {
 
       <Select value={params.get("payment") ?? "all"} onValueChange={(v) => set("payment", v)}>
         <SelectTrigger className="w-[10.5rem]">
-          <SelectValue placeholder="Pago" />
+          <SelectValue />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="all">Cualquier pago</SelectItem>
-          {Object.entries(PAYMENT_LABEL).map(([value, label]) => (
+          <SelectItem value="all">{t.admin.reservations.anyPayment}</SelectItem>
+          {Object.entries(t.admin.payment).map(([value, label]) => (
             <SelectItem key={value} value={value}>
               {label}
             </SelectItem>
@@ -83,11 +84,11 @@ export function ReservationFilters({ total }: { total: number }) {
 
       <Select value={params.get("channel") ?? "all"} onValueChange={(v) => set("channel", v)}>
         <SelectTrigger className="w-[10.5rem]">
-          <SelectValue placeholder="Canal" />
+          <SelectValue />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="all">Todos los canales</SelectItem>
-          {Object.entries(CHANNEL_SHORT).map(([value, label]) => (
+          <SelectItem value="all">{t.admin.reservations.allChannels}</SelectItem>
+          {Object.entries(t.admin.channelsShort).map(([value, label]) => (
             <SelectItem key={value} value={value}>
               {label}
             </SelectItem>
@@ -100,15 +101,17 @@ export function ReservationFilters({ total }: { total: number }) {
           variant="ghost"
           size="sm"
           className="gap-1.5"
-          onClick={() => router.replace("/admin/reservations", { scroll: false })}
+          onClick={() =>
+            router.replace(withLocale(locale, "/admin/reservations"), { scroll: false })
+          }
         >
           <X className="size-3.5" aria-hidden />
-          Limpiar
+          {t.common.clear}
         </Button>
       )}
 
       <span aria-live="polite" className="tnum ml-auto text-sm text-muted-foreground">
-        {total} {total === 1 ? "reserva" : "reservas"}
+        {t.admin.reservations.count(total)}
       </span>
     </div>
   );
