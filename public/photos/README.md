@@ -1,11 +1,13 @@
 # Fotografía de la demo
 
-Las imágenes de esta carpeta **no están versionadas**. Son fotos privadas de una
-propiedad real y este repositorio es público, así que viven sólo en la máquina de
-desarrollo.
+Fotografía provisional del cliente, versionada para que el despliegue de Vercel
+la sirva: Vercel construye desde el repositorio, así que una imagen fuera del
+control de versiones existe en local y da 404 en producción.
 
-Sin ellas la aplicación arranca y navega igual; lo único que se rompe son los
-`<Image>` del sitio del huésped.
+> **Es material privado de una propiedad real en un repositorio público.** Al
+> pasar a producción de verdad conviene mover el repositorio a privado, o servir
+> la fotografía definitiva desde un bucket con su propia URL en vez de desde
+> `public/`.
 
 ## Archivos que espera la demo
 

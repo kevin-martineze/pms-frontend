@@ -42,9 +42,3 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
-
-# Fotografía del cliente. Son imágenes privadas de una propiedad real y este
-# repositorio es público: viven sólo en la máquina de desarrollo. Ver
-# public/photos/README.md para la lista de archivos que espera la demo.
-/public/photos/*
-!/public/photos/README.md
