@@ -132,7 +132,7 @@ export const units: Unit[] = [
       { src: "/photos/property-exterior.jpg", alt: "Fachada del hotel con la piscina al frente" },
     ],
     featured: true,
-    accessibility: { stepFreeAccess: false, rollInShower: false, notes: "Segundo piso, sin ascensor." },
+    accessibility: { stepFreeAccess: false, rollInShower: false, notes: "Segundo piso, sin ascensor.", notesEn: "Second floor, no lift." },
   },
   {
     id: "u-familiar",
@@ -162,7 +162,7 @@ export const units: Unit[] = [
       { src: "/photos/property-exterior.jpg", alt: "Fachada del hotel con la piscina al frente" },
     ],
     featured: true,
-    accessibility: { stepFreeAccess: true, rollInShower: false, notes: "Acceso a nivel desde el estacionamiento." },
+    accessibility: { stepFreeAccess: true, rollInShower: false, notes: "Acceso a nivel desde el estacionamiento.", notesEn: "Level access from the parking." },
   },
   {
     id: "u-jardin",
@@ -220,7 +220,7 @@ export const units: Unit[] = [
       { src: "/photos/twin-room.jpg", alt: "Habitación con escritorio y televisor" },
     ],
     featured: false,
-    accessibility: { stepFreeAccess: false, rollInShower: false, notes: "Segundo piso, sin ascensor." },
+    accessibility: { stepFreeAccess: false, rollInShower: false, notes: "Segundo piso, sin ascensor.", notesEn: "Second floor, no lift." },
   },
   {
     id: "u-bungalow",
@@ -277,7 +277,7 @@ export const units: Unit[] = [
       { src: "/photos/casa-1.jpg", alt: "Exterior de Casa Palma" },
       { src: "/photos/pool-sunset.jpg", alt: "Piscina privada al atardecer entre palmeras" },
       { src: "/photos/casa-2.jpg", alt: "Interior de Casa Palma" },
-      { src: "/photos/casa-3.jpg", alt: "Área social de Casa Palma" },
+      { src: "/photos/property-hero.jpg", alt: "Área social de Casa Palma" },
       { src: "/photos/casa-4.jpg", alt: "Habitación de Casa Palma" },
       { src: "/photos/casa-5.jpg", alt: "Terraza de Casa Palma" },
     ],

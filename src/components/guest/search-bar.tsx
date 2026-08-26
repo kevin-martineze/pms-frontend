@@ -2,7 +2,6 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { es } from "date-fns/locale";
 import { CalendarDays, Minus, Plus, Search, Users } from "lucide-react";
 import type { DateRange } from "react-day-picker";
 
@@ -11,7 +10,9 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
-import { diffNights, formatDateShort, pluralNights, toIsoDate } from "@/lib/format";
+import { diffNights, formatDateShort, toIsoDate } from "@/lib/format";
+import { withLocale } from "@/lib/i18n/paths";
+import { useI18n } from "@/lib/i18n/provider";
 
 /**
  * La barra de búsqueda.
@@ -24,7 +25,7 @@ import { diffNights, formatDateShort, pluralNights, toIsoDate } from "@/lib/form
  * 2. El contador de huéspedes es +/-, no un `<select>` de 1 a 10. En móvil un
  *    select abre una rueda nativa que tapa media pantalla.
  * 3. El estado vive en la URL al buscar. Un resultado filtrado se puede
- *    compartir por WhatsApp, que es exactamente como Julius va a mandar
+ *    compartir por WhatsApp, que es exactamente como el hotel va a mandar
  *    disponibilidad a un huésped.
  */
 
@@ -44,6 +45,8 @@ export function SearchBar({
   defaultChildren = 0,
 }: Props) {
   const router = useRouter();
+  const { t, locale, intlTag, dateLocale } = useI18n();
+
   const [range, setRange] = React.useState<DateRange | undefined>(defaultRange);
   const [adults, setAdults] = React.useState(defaultAdults);
   const [children, setChildren] = React.useState(defaultChildren);
@@ -58,7 +61,7 @@ export function SearchBar({
     if (range?.to) params.set("out", toIsoDate(range.to));
     params.set("adults", String(adults));
     if (children > 0) params.set("children", String(children));
-    router.push(`/stays?${params.toString()}`);
+    router.push(withLocale(locale, `/stays?${params.toString()}`));
   }
 
   const hero = variant === "hero";
@@ -80,21 +83,22 @@ export function SearchBar({
             <CalendarDays className="size-4 shrink-0 text-muted-foreground" aria-hidden />
             <span className="min-w-0">
               <span className="block text-[0.68rem] font-medium uppercase tracking-[0.14em] text-muted-foreground">
-                Fechas
+                {t.search.dates}
               </span>
               <span className="block truncate text-sm">
                 {range?.from && range?.to ? (
                   <>
-                    {formatDateShort(toIsoDate(range.from))} — {formatDateShort(toIsoDate(range.to))}
-                    <span className="ml-2 text-muted-foreground">{pluralNights(nights)}</span>
+                    {formatDateShort(toIsoDate(range.from), intlTag)} —{" "}
+                    {formatDateShort(toIsoDate(range.to), intlTag)}
+                    <span className="ml-2 text-muted-foreground">{t.common.nights(nights)}</span>
                   </>
                 ) : range?.from ? (
                   <>
-                    {formatDateShort(toIsoDate(range.from))}
-                    <span className="ml-2 text-muted-foreground">elige la salida</span>
+                    {formatDateShort(toIsoDate(range.from), intlTag)}
+                    <span className="ml-2 text-muted-foreground">{t.search.pickCheckout}</span>
                   </>
                 ) : (
-                  <span className="text-muted-foreground">¿Cuándo llegas?</span>
+                  <span className="text-muted-foreground">{t.search.whenArrive}</span>
                 )}
               </span>
             </span>
@@ -103,7 +107,7 @@ export function SearchBar({
         <PopoverContent align="start" className="w-auto p-0">
           <Calendar
             mode="range"
-            locale={es}
+            locale={dateLocale}
             numberOfMonths={2}
             selected={range}
             onSelect={(next) => {
@@ -114,9 +118,9 @@ export function SearchBar({
             className="p-3 [--cell-size:--spacing(9)]"
           />
           <div className="flex items-center justify-between border-t border-border px-4 py-3 text-xs text-muted-foreground">
-            <span>Mínimo 1 noche · Check-in desde las 15:00</span>
+            <span>{t.search.minStay}</span>
             <Button variant="ghost" size="sm" onClick={() => setRange(undefined)}>
-              Limpiar
+              {t.common.clear}
             </Button>
           </div>
         </PopoverContent>
@@ -133,35 +137,35 @@ export function SearchBar({
             <Users className="size-4 shrink-0 text-muted-foreground" aria-hidden />
             <span>
               <span className="block text-[0.68rem] font-medium uppercase tracking-[0.14em] text-muted-foreground">
-                Huéspedes
+                {t.search.guests}
               </span>
-              <span className="block text-sm">
-                {adults + children} {adults + children === 1 ? "persona" : "personas"}
-              </span>
+              <span className="block text-sm">{t.common.people(adults + children)}</span>
             </span>
           </button>
         </PopoverTrigger>
         <PopoverContent align="start" className="w-72 p-2">
           <Stepper
-            label="Adultos"
-            hint="13 años o más"
+            label={t.common.adults}
+            hint={t.common.adultsHint}
             value={adults}
             min={1}
             max={12}
             onChange={setAdults}
+            addLabel={t.common.add}
+            removeLabel={t.common.remove}
           />
           <Separator className="my-1" />
           <Stepper
-            label="Niños"
-            hint="Menores de 13 años"
+            label={t.common.children}
+            hint={t.common.childrenHint}
             value={children}
             min={0}
             max={8}
             onChange={setChildren}
+            addLabel={t.common.add}
+            removeLabel={t.common.remove}
           />
-          <p className="px-3 py-2 text-xs text-muted-foreground">
-            Cuna disponible sin costo en las habitaciones familiares.
-          </p>
+          <p className="px-3 py-2 text-xs text-muted-foreground">{t.search.cribNote}</p>
         </PopoverContent>
       </Popover>
 
@@ -171,7 +175,7 @@ export function SearchBar({
         className={cn("gap-2 md:rounded-full", hero && "md:px-7")}
       >
         <Search className="size-4" aria-hidden />
-        Ver disponibilidad
+        {t.search.submit}
       </Button>
     </div>
   );
@@ -184,6 +188,8 @@ function Stepper({
   min,
   max,
   onChange,
+  addLabel,
+  removeLabel,
 }: {
   label: string;
   hint: string;
@@ -191,6 +197,8 @@ function Stepper({
   min: number;
   max: number;
   onChange: (next: number) => void;
+  addLabel: string;
+  removeLabel: string;
 }) {
   return (
     <div className="flex items-center justify-between gap-4 px-3 py-2.5">
@@ -208,7 +216,7 @@ function Stepper({
           onClick={() => onChange(value - 1)}
         >
           <Minus className="size-3.5" aria-hidden />
-          <span className="sr-only">Quitar un {label.toLowerCase()}</span>
+          <span className="sr-only">{`${removeLabel} — ${label}`}</span>
         </Button>
         <span className="tnum w-7 text-center text-sm">{value}</span>
         <Button
@@ -220,7 +228,7 @@ function Stepper({
           onClick={() => onChange(value + 1)}
         >
           <Plus className="size-3.5" aria-hidden />
-          <span className="sr-only">Agregar un {label.toLowerCase()}</span>
+          <span className="sr-only">{`${addLabel} — ${label}`}</span>
         </Button>
       </div>
     </div>

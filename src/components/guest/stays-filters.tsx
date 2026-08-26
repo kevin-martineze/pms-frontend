@@ -19,6 +19,9 @@ import {
 } from "@/components/ui/select";
 import { AmenityIcon } from "@/components/guest/amenity-icon";
 import { amenities } from "@/lib/mock/property";
+import { amenityLabel } from "@/lib/i18n/content";
+import { withLocale } from "@/lib/i18n/paths";
+import { useI18n } from "@/lib/i18n/provider";
 import { cn } from "@/lib/utils";
 
 /**
@@ -27,28 +30,27 @@ import { cn } from "@/lib/utils";
  * Todo el estado vive en `URLSearchParams`, no en `useState`. Eso da tres cosas
  * gratis que un estado local no da: el botón atrás del navegador funciona, un
  * refresh no pierde la selección, y la vista filtrada se puede pegar en un
- * WhatsApp — que es literalmente como Julius va a mandar disponibilidad.
+ * WhatsApp — que es literalmente como el hotel va a mandar disponibilidad.
  */
 
-const KINDS = [
-  { value: "", label: "Todo" },
-  { value: "hotel", label: "Hotel" },
-  { value: "villa", label: "Casas completas" },
-];
-
-const SORTS = [
-  { value: "recommended", label: "Recomendado" },
-  { value: "price-asc", label: "Precio: menor primero" },
-  { value: "price-desc", label: "Precio: mayor primero" },
-  { value: "capacity", label: "Capacidad" },
-];
-
 /** Las que un huésped realmente filtra. El resto se lee en la ficha. */
-const FILTERABLE = ["pool", "sea-view", "kitchen", "air-con", "terrace", "garden", "bbq", "washer", "workspace", "parking"];
+const FILTERABLE = [
+  "pool",
+  "sea-view",
+  "kitchen",
+  "air-con",
+  "terrace",
+  "garden",
+  "bbq",
+  "washer",
+  "workspace",
+  "parking",
+];
 
 export function StaysFilters({ resultCount }: { resultCount: number }) {
   const router = useRouter();
   const params = useSearchParams();
+  const { t, locale } = useI18n();
 
   const kind = params.get("kind") ?? "";
   const sort = params.get("sort") ?? "recommended";
@@ -58,12 +60,25 @@ export function StaysFilters({ resultCount }: { resultCount: number }) {
     [params],
   );
 
+  const kinds = [
+    { value: "", label: t.stays.kindAll },
+    { value: "hotel", label: t.stays.kindHotel },
+    { value: "villa", label: t.stays.kindVilla },
+  ];
+
+  const sorts = [
+    { value: "recommended", label: t.stays.sortRecommended },
+    { value: "price-asc", label: t.stays.sortPriceAsc },
+    { value: "price-desc", label: t.stays.sortPriceDesc },
+    { value: "capacity", label: t.stays.sortCapacity },
+  ];
+
   const activeCount = (kind ? 1 : 0) + (accessible ? 1 : 0) + selectedAmenities.size;
 
   function apply(mutate: (next: URLSearchParams) => void) {
     const next = new URLSearchParams(params.toString());
     mutate(next);
-    router.replace(`/stays?${next.toString()}`, { scroll: false });
+    router.replace(withLocale(locale, `/stays?${next.toString()}`), { scroll: false });
   }
 
   function setParam(key: string, value: string | null) {
@@ -90,8 +105,8 @@ export function StaysFilters({ resultCount }: { resultCount: number }) {
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <div className="flex items-center gap-1.5" role="group" aria-label="Tipo de alojamiento">
-        {KINDS.map((option) => (
+      <div className="flex items-center gap-1.5" role="group" aria-label={t.stays.filters}>
+        {kinds.map((option) => (
           <button
             key={option.value || "all"}
             type="button"
@@ -113,7 +128,7 @@ export function StaysFilters({ resultCount }: { resultCount: number }) {
         <SheetTrigger asChild>
           <Button variant="outline" className="gap-2 rounded-full">
             <SlidersHorizontal className="size-4" aria-hidden />
-            Filtros
+            {t.stays.filters}
             {activeCount > 0 && (
               <Badge className="ml-0.5 size-5 justify-center rounded-full p-0 tabular-nums">
                 {activeCount}
@@ -123,12 +138,12 @@ export function StaysFilters({ resultCount }: { resultCount: number }) {
         </SheetTrigger>
         <SheetContent side="right" className="w-full gap-0 sm:max-w-md">
           <SheetHeader className="border-b border-border">
-            <SheetTitle className="display-sm text-left text-xl">Filtros</SheetTitle>
+            <SheetTitle className="display-sm text-left text-xl">{t.stays.filters}</SheetTitle>
           </SheetHeader>
 
           <div className="flex-1 overflow-y-auto px-5 py-5">
             <fieldset>
-              <legend className="text-sm font-medium">Accesibilidad</legend>
+              <legend className="text-sm font-medium">{t.stays.accessibility}</legend>
               <div className="mt-3 flex items-start gap-3">
                 <Checkbox
                   id="f-accessible"
@@ -136,10 +151,8 @@ export function StaysFilters({ resultCount }: { resultCount: number }) {
                   onCheckedChange={(checked) => setParam("accessible", checked ? "1" : null)}
                 />
                 <Label htmlFor="f-accessible" className="grid gap-1 font-normal">
-                  Acceso sin escalones
-                  <span className="text-xs text-muted-foreground">
-                    Entrada a nivel desde el estacionamiento, sin peldaños en el recorrido.
-                  </span>
+                  {t.stays.stepFree}
+                  <span className="text-xs text-muted-foreground">{t.stays.stepFreeHint}</span>
                 </Label>
               </div>
             </fieldset>
@@ -147,7 +160,7 @@ export function StaysFilters({ resultCount }: { resultCount: number }) {
             <Separator className="my-6" />
 
             <fieldset>
-              <legend className="text-sm font-medium">Amenidades</legend>
+              <legend className="text-sm font-medium">{t.stays.amenities}</legend>
               <div className="mt-3 grid gap-3">
                 {amenities
                   .filter((a) => FILTERABLE.includes(a.id))
@@ -160,7 +173,7 @@ export function StaysFilters({ resultCount }: { resultCount: number }) {
                       />
                       <Label htmlFor={`f-${amenity.id}`} className="gap-2 font-normal">
                         <AmenityIcon name={amenity.icon} className="size-4 text-muted-foreground" />
-                        {amenity.label}
+                        {amenityLabel(amenity, locale)}
                       </Label>
                     </div>
                   ))}
@@ -170,12 +183,12 @@ export function StaysFilters({ resultCount }: { resultCount: number }) {
 
           <div className="flex items-center justify-between gap-3 border-t border-border p-4">
             <Button variant="ghost" onClick={clearAll} disabled={activeCount === 0}>
-              Limpiar todo
+              {t.common.clearAll}
             </Button>
             {/* El contador es aria-live para que un lector de pantalla sepa que
                 la lista cambió sin tener que salir del panel. */}
             <span aria-live="polite" className="text-sm text-muted-foreground">
-              {resultCount} {resultCount === 1 ? "opción" : "opciones"}
+              {t.stays.options(resultCount)}
             </span>
           </div>
         </SheetContent>
@@ -184,18 +197,21 @@ export function StaysFilters({ resultCount }: { resultCount: number }) {
       {activeCount > 0 && (
         <Button variant="ghost" size="sm" className="gap-1.5 rounded-full" onClick={clearAll}>
           <X className="size-3.5" aria-hidden />
-          Limpiar
+          {t.common.clear}
         </Button>
       )}
 
       <div className="ml-auto flex items-center gap-2">
-        <span className="hidden text-sm text-muted-foreground sm:inline">Ordenar</span>
-        <Select value={sort} onValueChange={(value) => setParam("sort", value === "recommended" ? null : value)}>
+        <span className="hidden text-sm text-muted-foreground sm:inline">{t.stays.sortBy}</span>
+        <Select
+          value={sort}
+          onValueChange={(value) => setParam("sort", value === "recommended" ? null : value)}
+        >
           <SelectTrigger className="w-[13rem] rounded-full">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            {SORTS.map((option) => (
+            {sorts.map((option) => (
               <SelectItem key={option.value} value={option.value}>
                 {option.label}
               </SelectItem>

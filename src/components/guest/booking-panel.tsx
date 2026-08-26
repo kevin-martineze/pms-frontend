@@ -2,7 +2,6 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { es } from "date-fns/locale";
 import { CalendarDays, Minus, Plus, ShieldCheck, Sparkles, Users } from "lucide-react";
 import type { DateRange } from "react-day-picker";
 
@@ -13,6 +12,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Separator } from "@/components/ui/separator";
 import { composeQuote } from "@/lib/quote";
 import { formatDateShort, formatMoney, parseIsoDate, toIsoDate } from "@/lib/format";
+import { withLocale } from "@/lib/i18n/paths";
+import { useI18n } from "@/lib/i18n/provider";
 import type { IsoDate } from "@/lib/domain/types";
 import { cn } from "@/lib/utils";
 
@@ -55,6 +56,7 @@ export function BookingPanel({
   defaultRange,
 }: Props) {
   const router = useRouter();
+  const { t, locale, intlTag, dateLocale } = useI18n();
 
   const [range, setRange] = React.useState<DateRange | undefined>(
     defaultRange
@@ -78,8 +80,9 @@ export function BookingPanel({
       guests: adults + children,
       cleaningFee,
       directDiscount: true,
+      labels: t.booking.line,
     });
-  }, [range, unitId, unitName, rates, adults, children, cleaningFee]);
+  }, [range, unitId, unitName, rates, adults, children, cleaningFee, t]);
 
   function goToCheckout() {
     if (!range?.from || !range?.to) {
@@ -92,7 +95,7 @@ export function BookingPanel({
       adults: String(adults),
     });
     if (children > 0) params.set("children", String(children));
-    router.push(`/book/${unitSlug}?${params.toString()}`);
+    router.push(withLocale(locale, `/book/${unitSlug}?${params.toString()}`));
   }
 
   return (
@@ -100,11 +103,11 @@ export function BookingPanel({
       <div className="flex items-baseline justify-between gap-3">
         <p>
           <span className="text-2xl font-medium">{basePriceLabel}</span>
-          <span className="text-sm text-muted-foreground"> / noche</span>
+          <span className="text-sm text-muted-foreground"> / {t.common.night}</span>
         </p>
         {unitsLeft !== null && unitsLeft <= 1 && unitsLeft > 0 && (
           <Badge variant="secondary" className="bg-terracotta/12 text-terracotta">
-            Queda 1
+            {t.booking.oneLeft}
           </Badge>
         )}
       </div>
@@ -119,13 +122,13 @@ export function BookingPanel({
               <CalendarDays className="size-4 shrink-0 text-muted-foreground" aria-hidden />
               <span className="min-w-0">
                 <span className="block text-[0.68rem] font-medium uppercase tracking-[0.14em] text-muted-foreground">
-                  Entrada — Salida
+                  {t.booking.checkInOut}
                 </span>
                 <span className="block truncate text-sm">
                   {range?.from && range?.to ? (
-                    `${formatDateShort(toIsoDate(range.from))} — ${formatDateShort(toIsoDate(range.to))}`
+                    `${formatDateShort(toIsoDate(range.from), intlTag)} — ${formatDateShort(toIsoDate(range.to), intlTag)}`
                   ) : (
-                    <span className="text-muted-foreground">Elige tus fechas</span>
+                    <span className="text-muted-foreground">{t.booking.pickDates}</span>
                   )}
                 </span>
               </span>
@@ -134,7 +137,7 @@ export function BookingPanel({
           <PopoverContent align="start" className="w-auto p-0">
             <Calendar
               mode="range"
-              locale={es}
+              locale={dateLocale}
               numberOfMonths={1}
               selected={range}
               onSelect={(next) => {
@@ -150,7 +153,7 @@ export function BookingPanel({
               className="p-3 [--cell-size:--spacing(9)]"
             />
             <p className="border-t border-border px-4 py-2.5 text-xs text-muted-foreground">
-              Las fechas tachadas ya están reservadas.
+              {t.booking.bookedDatesNote}
             </p>
           </PopoverContent>
         </Popover>
@@ -164,18 +167,34 @@ export function BookingPanel({
               <Users className="size-4 shrink-0 text-muted-foreground" aria-hidden />
               <span>
                 <span className="block text-[0.68rem] font-medium uppercase tracking-[0.14em] text-muted-foreground">
-                  Huéspedes
+                  {t.search.guests}
                 </span>
                 <span className="block text-sm">
-                  {adults + children} de {maxGuests} máximo
+                  {t.booking.guestsOf(adults + children, maxGuests)}
                 </span>
               </span>
             </button>
           </PopoverTrigger>
           <PopoverContent align="start" className="w-72 p-2">
-            <Row label="Adultos" value={adults} min={1} max={maxGuests - children} onChange={setAdults} />
+            <Row
+              label={t.common.adults}
+              value={adults}
+              min={1}
+              max={maxGuests - children}
+              onChange={setAdults}
+              addLabel={t.common.add}
+              removeLabel={t.common.remove}
+            />
             <Separator className="my-1" />
-            <Row label="Niños" value={children} min={0} max={maxGuests - adults} onChange={setChildren} />
+            <Row
+              label={t.common.children}
+              value={children}
+              min={0}
+              max={maxGuests - adults}
+              onChange={setChildren}
+              addLabel={t.common.add}
+              removeLabel={t.common.remove}
+            />
           </PopoverContent>
         </Popover>
       </div>
@@ -199,7 +218,7 @@ export function BookingPanel({
                     line.kind === "discount" && "text-status-vacant-clean",
                   )}
                 >
-                  {formatMoney(line.amount)}
+                  {formatMoney(line.amount, intlTag)}
                 </dd>
               </div>
             ))}
@@ -208,32 +227,29 @@ export function BookingPanel({
           <Separator className="my-4" />
 
           <div className="flex items-baseline justify-between gap-4">
-            <span className="font-medium">Total</span>
-            <span className="tnum text-xl font-medium">{formatMoney(quote.total)}</span>
+            <span className="font-medium">{t.common.total}</span>
+            <span className="tnum text-xl font-medium">{formatMoney(quote.total, intlTag)}</span>
           </div>
           <p className="mt-1.5 text-xs text-muted-foreground">
-            Pagas <strong className="font-medium text-foreground">{formatMoney(quote.dueNow)}</strong>{" "}
-            ahora; el resto al llegar.
+            {t.booking.payNow(formatMoney(quote.dueNow, intlTag))}
           </p>
         </>
       ) : (
-        <p className="mt-5 text-sm text-muted-foreground">
-          Elige las fechas para ver el precio exacto de esas noches, con impuestos incluidos.
-        </p>
+        <p className="mt-5 text-sm text-muted-foreground">{t.booking.noQuoteYet}</p>
       )}
 
       <Button size="lg" className="mt-5 w-full" onClick={goToCheckout}>
-        {quote ? "Continuar con la reserva" : "Elegir fechas"}
+        {quote ? t.booking.continue : t.booking.pickDatesCta}
       </Button>
 
       <ul className="mt-4 space-y-2 text-xs text-muted-foreground">
         <li className="flex items-center gap-2">
           <ShieldCheck className="size-3.5 shrink-0 text-palm" aria-hidden />
-          Cancelación gratis hasta 48 h antes
+          {t.booking.freeCancellation}
         </li>
         <li className="flex items-center gap-2">
           <Sparkles className="size-3.5 shrink-0 text-palm" aria-hidden />
-          7% más barato que en Booking y Airbnb
+          {t.booking.cheaperThanOta}
         </li>
       </ul>
     </aside>
@@ -246,12 +262,16 @@ function Row({
   min,
   max,
   onChange,
+  addLabel,
+  removeLabel,
 }: {
   label: string;
   value: number;
   min: number;
   max: number;
   onChange: (next: number) => void;
+  addLabel: string;
+  removeLabel: string;
 }) {
   return (
     <div className="flex items-center justify-between gap-4 px-3 py-2.5">
@@ -266,7 +286,7 @@ function Row({
           onClick={() => onChange(value - 1)}
         >
           <Minus className="size-3.5" aria-hidden />
-          <span className="sr-only">Quitar</span>
+          <span className="sr-only">{`${removeLabel} — ${label}`}</span>
         </Button>
         <span className="tnum w-7 text-center text-sm">{value}</span>
         <Button
@@ -278,7 +298,7 @@ function Row({
           onClick={() => onChange(value + 1)}
         >
           <Plus className="size-3.5" aria-hidden />
-          <span className="sr-only">Agregar</span>
+          <span className="sr-only">{`${addLabel} — ${label}`}</span>
         </Button>
       </span>
     </div>

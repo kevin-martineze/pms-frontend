@@ -7,8 +7,8 @@ import { BadgeCheck, LogIn, LogOut, MessageCircle, TriangleAlert } from "lucide-
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { CHANNEL_LABEL } from "@/components/admin/labels";
 import { formatMoney } from "@/lib/format";
+import { useI18n } from "@/lib/i18n/provider";
 import type { Reservation } from "@/lib/domain/types";
 import { cn } from "@/lib/utils";
 
@@ -27,43 +27,47 @@ type Props = {
 };
 
 export function TodayLists({ arrivals, departures }: Props) {
+  const { t, intlTag } = useI18n();
   const [checkedIn, setCheckedIn] = React.useState<Set<string>>(new Set());
   const [checkedOut, setCheckedOut] = React.useState<Set<string>>(new Set());
 
   function doCheckIn(reservation: Reservation) {
     setCheckedIn((prev) => new Set(prev).add(reservation.id));
-    toast.success(`${reservation.guest.name} registrado`, {
-      description: `Habitación ${reservation.room} entregada. Camarería fue notificada.`,
+    toast.success(t.admin.dashboard.checkInToast(reservation.guest.name), {
+      description: t.admin.dashboard.checkInToastBody(reservation.room ?? ""),
     });
   }
 
   function doCheckOut(reservation: Reservation) {
     setCheckedOut((prev) => new Set(prev).add(reservation.id));
-    toast.success(`${reservation.guest.name} hizo salida`, {
-      description: `Habitación ${reservation.room} pasó a "por limpiar".`,
+    toast.success(t.admin.dashboard.checkOutToast(reservation.guest.name), {
+      description: t.admin.dashboard.checkOutToastBody(reservation.room ?? ""),
     });
   }
 
   return (
     <div className="grid gap-5 xl:grid-cols-2">
       <Panel
-        title="Llegan hoy"
+        title={t.admin.dashboard.arrivals}
         icon={<LogIn className="size-4" aria-hidden />}
         count={arrivals.length}
-        empty="Nadie llega hoy."
+        empty={t.admin.dashboard.noArrivals}
       >
         {arrivals.map((reservation) => {
           const done = checkedIn.has(reservation.id);
           return (
-            <Row key={reservation.id} reservation={reservation} done={done}>
+            <Row key={reservation.id} reservation={reservation} done={done} intlTag={intlTag}>
               {done ? (
-                <Badge variant="secondary" className="gap-1.5 bg-status-vacant-clean/15 text-status-vacant-clean">
+                <Badge
+                  variant="secondary"
+                  className="gap-1.5 bg-status-vacant-clean/15 text-status-vacant-clean"
+                >
                   <BadgeCheck className="size-3.5" aria-hidden />
-                  Registrado
+                  {t.admin.dashboard.checkedIn}
                 </Badge>
               ) : (
                 <Button size="sm" onClick={() => doCheckIn(reservation)}>
-                  Check-in
+                  {t.admin.dashboard.checkIn}
                 </Button>
               )}
             </Row>
@@ -72,23 +76,23 @@ export function TodayLists({ arrivals, departures }: Props) {
       </Panel>
 
       <Panel
-        title="Salen hoy"
+        title={t.admin.dashboard.departures}
         icon={<LogOut className="size-4" aria-hidden />}
         count={departures.length}
-        empty="Nadie sale hoy."
+        empty={t.admin.dashboard.noDepartures}
       >
         {departures.map((reservation) => {
           const done = checkedOut.has(reservation.id) || reservation.status === "checked-out";
           return (
-            <Row key={reservation.id} reservation={reservation} done={done}>
+            <Row key={reservation.id} reservation={reservation} done={done} intlTag={intlTag}>
               {done ? (
                 <Badge variant="secondary" className="gap-1.5">
                   <BadgeCheck className="size-3.5" aria-hidden />
-                  Salió
+                  {t.admin.dashboard.checkedOut}
                 </Badge>
               ) : (
                 <Button size="sm" variant="outline" onClick={() => doCheckOut(reservation)}>
-                  Check-out
+                  {t.admin.dashboard.checkOut}
                 </Button>
               )}
             </Row>
@@ -133,13 +137,17 @@ function Panel({
 function Row({
   reservation,
   done,
+  intlTag,
   children,
 }: {
   reservation: Reservation;
   done: boolean;
+  intlTag: string;
   children: React.ReactNode;
 }) {
+  const { t } = useI18n();
   const owes = reservation.balance.amountMinor > 0;
+  const digits = reservation.guest.phone.replace(/[^0-9]/g, "");
 
   return (
     <li className={cn("flex items-center gap-3 px-4 py-3", done && "opacity-55")}>
@@ -158,25 +166,27 @@ function Row({
           {reservation.guest.name}
           {reservation.guest.previousStays > 0 && (
             <span className="shrink-0 rounded-full bg-butter/25 px-1.5 py-0.5 text-[0.62rem] font-medium text-accent-foreground">
-              {reservation.guest.previousStays + 1}ª estancia
+              {t.admin.dashboard.nthStay(reservation.guest.previousStays + 1)}
             </span>
           )}
         </p>
         <p className="mt-0.5 flex flex-wrap items-center gap-x-2.5 gap-y-0.5 text-xs text-muted-foreground">
-          <span className="tnum font-medium text-foreground">Hab. {reservation.room}</span>
-          <span>{reservation.nights}n</span>
-          <span>{CHANNEL_LABEL[reservation.channel]}</span>
+          <span className="tnum font-medium text-foreground">
+            {t.common.room} {reservation.room}
+          </span>
+          <span>{t.common.nights(reservation.nights)}</span>
+          <span>{t.admin.channels[reservation.channel]}</span>
           {owes && (
             <span className="tnum flex items-center gap-1 text-status-departing">
               <TriangleAlert className="size-3" aria-hidden />
-              debe {formatMoney(reservation.balance)}
+              {t.admin.dashboard.owes(formatMoney(reservation.balance, intlTag))}
             </span>
           )}
         </p>
       </div>
 
       <Button variant="ghost" size="icon" className="size-8 shrink-0 text-muted-foreground" asChild>
-        <a href={`https://wa.me/${reservation.guest.phone.replace(/\D/g, "")}`} aria-label="Escribir por WhatsApp">
+        <a href={`https://wa.me/${digits}`} aria-label={t.admin.dashboard.writeWhatsapp}>
           <MessageCircle className="size-4" aria-hidden />
         </a>
       </Button>

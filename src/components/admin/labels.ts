@@ -1,31 +1,13 @@
-import type { Channel, PaymentStatus, ReservationStatus } from "@/lib/domain/types";
+import type { Channel, PaymentStatus, ReservationStatus, RoomState } from "@/lib/domain/types";
 
 /**
- * Etiquetas en español para los estados del dominio.
+ * Lo que de un estado no es texto.
  *
- * Viven en un solo archivo porque el nombre de un estado aparece en la tabla, en
- * el calendario, en el filtro y en el detalle. Cuando "pendiente" pase a
- * llamarse "por confirmar" — y va a pasar, en la primera semana de operación —
- * el cambio es una línea.
+ * Los nombres traducibles viven en `src/lib/i18n`; aquí quedan sólo el dato
+ * duro (la comisión de cada canal) y el color de cada estado. Separarlos evita
+ * el error más común de un sistema multilingüe: una clase de Tailwind metida en
+ * un archivo de traducción, que se rompe en cuanto alguien traduce el valor.
  */
-
-export const CHANNEL_LABEL: Record<Channel, string> = {
-  direct: "Sitio propio",
-  booking: "Booking.com",
-  airbnb: "Airbnb",
-  expedia: "Expedia",
-  "walk-in": "Llegó sin reserva",
-  phone: "Teléfono / WhatsApp",
-};
-
-export const CHANNEL_SHORT: Record<Channel, string> = {
-  direct: "Directo",
-  booking: "Booking",
-  airbnb: "Airbnb",
-  expedia: "Expedia",
-  "walk-in": "Walk-in",
-  phone: "Teléfono",
-};
 
 /** Comisión típica del canal. Es lo que hace visible el costo de cada reserva. */
 export const CHANNEL_COMMISSION: Record<Channel, number> = {
@@ -37,15 +19,6 @@ export const CHANNEL_COMMISSION: Record<Channel, number> = {
   phone: 0,
 };
 
-export const STATUS_LABEL: Record<ReservationStatus, string> = {
-  confirmed: "Confirmada",
-  "in-house": "En casa",
-  "checked-out": "Salió",
-  cancelled: "Cancelada",
-  "no-show": "No llegó",
-  pending: "Por confirmar",
-};
-
 export const STATUS_CLASS: Record<ReservationStatus, string> = {
   confirmed: "bg-status-arriving/12 text-status-arriving border-status-arriving/25",
   "in-house": "bg-status-occupied/12 text-status-occupied border-status-occupied/25",
@@ -55,16 +28,18 @@ export const STATUS_CLASS: Record<ReservationStatus, string> = {
   pending: "bg-status-vacant-dirty/15 text-status-vacant-dirty border-status-vacant-dirty/30",
 };
 
-export const PAYMENT_LABEL: Record<PaymentStatus, string> = {
-  paid: "Pagada",
-  deposit: "Depósito",
-  unpaid: "Por cobrar",
-  refunded: "Reembolsada",
-};
-
 export const PAYMENT_CLASS: Record<PaymentStatus, string> = {
   paid: "bg-status-vacant-clean/12 text-status-vacant-clean border-status-vacant-clean/25",
   deposit: "bg-status-vacant-dirty/15 text-status-vacant-dirty border-status-vacant-dirty/30",
   unpaid: "bg-status-departing/12 text-status-departing border-status-departing/25",
   refunded: "bg-muted text-muted-foreground border-border",
+};
+
+export const ROOM_STATE_CLASS: Record<RoomState, string> = {
+  "vacant-clean": "bg-status-vacant-clean/15 text-status-vacant-clean border-status-vacant-clean/30",
+  "vacant-dirty": "bg-status-vacant-dirty/20 text-status-vacant-dirty border-status-vacant-dirty/40",
+  occupied: "bg-status-occupied/15 text-status-occupied border-status-occupied/30",
+  arriving: "bg-status-arriving/15 text-status-arriving border-status-arriving/30",
+  departing: "bg-status-departing/15 text-status-departing border-status-departing/30",
+  blocked: "bg-muted text-muted-foreground border-border",
 };

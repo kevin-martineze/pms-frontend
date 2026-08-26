@@ -20,14 +20,6 @@ export const staff: StaffMember[] = [
   { id: "s-tony", name: "Tony", role: "restaurant", initials: "TO", shift: "11:00 – 22:00" },
 ];
 
-export const ROLE_LABEL: Record<StaffMember["role"], string> = {
-  owner: "Propietario",
-  manager: "Gerencia",
-  "front-desk": "Recepción",
-  housekeeping: "Camarería",
-  restaurant: "Restaurante",
-};
-
 /**
  * Lo que cada rol puede ver. La demo lo usa para el selector "ver el sistema
  * como…", que es la forma más rápida de mostrarle a Julius que su recepcionista
@@ -68,24 +60,6 @@ export function roomStateOn(room: string, date = TODAY): RoomState {
   return departedYesterday ? "vacant-dirty" : "vacant-clean";
 }
 
-export const ROOM_STATE_LABEL: Record<RoomState, string> = {
-  "vacant-clean": "Libre y limpia",
-  "vacant-dirty": "Libre, por limpiar",
-  occupied: "Ocupada",
-  arriving: "Llega hoy",
-  departing: "Sale hoy",
-  blocked: "Bloqueada",
-};
-
-export const ROOM_STATE_CLASS: Record<RoomState, string> = {
-  "vacant-clean": "bg-status-vacant-clean/15 text-status-vacant-clean border-status-vacant-clean/30",
-  "vacant-dirty": "bg-status-vacant-dirty/20 text-status-vacant-dirty border-status-vacant-dirty/40",
-  occupied: "bg-status-occupied/15 text-status-occupied border-status-occupied/30",
-  arriving: "bg-status-arriving/15 text-status-arriving border-status-arriving/30",
-  departing: "bg-status-departing/15 text-status-departing border-status-departing/30",
-  blocked: "bg-muted text-muted-foreground border-border",
-};
-
 export function housekeepingToday(): HousekeepingTask[] {
   const cleaners = staff.filter((s) => s.role === "housekeeping");
 
@@ -119,17 +93,11 @@ export function housekeepingToday(): HousekeepingTask[] {
       type,
       assignedTo,
       priority,
-      note: state === "blocked" ? "Mantenimiento: cambio de aire acondicionado" : undefined,
+      /* La nota se traduce en la vista; aquí sólo se marca que existe. */
+      note: state === "blocked" ? "maintenance-ac" : undefined,
     };
   });
 }
-
-export const HK_TYPE_LABEL: Record<HousekeepingTask["type"], string> = {
-  departure: "Salida — limpieza a fondo",
-  stayover: "Permanencia",
-  deep: "Profunda",
-  inspection: "Inspección previa a llegada",
-};
 
 // ---------------------------------------------------------------------------
 // Tarifas
@@ -138,31 +106,23 @@ export const HK_TYPE_LABEL: Record<HousekeepingTask["type"], string> = {
 export const ratePlans: RatePlan[] = [
   {
     id: "rp-flex",
-    name: "Tarifa flexible",
     multiplier: 1,
     minNights: 1,
-    cancellation: "Cancelación gratis hasta 48 h antes",
   },
   {
     id: "rp-nonref",
-    name: "No reembolsable",
     multiplier: 0.86,
     minNights: 1,
-    cancellation: "Sin reembolso. Se cobra el total al reservar.",
   },
   {
     id: "rp-week",
-    name: "Estancia larga (7+ noches)",
     multiplier: 0.82,
     minNights: 7,
-    cancellation: "Cancelación gratis hasta 7 días antes",
   },
   {
     id: "rp-direct",
-    name: "Directo — mejor precio",
     multiplier: 0.93,
     minNights: 2,
-    cancellation: "Cancelación gratis hasta 24 h antes. Solo en el sitio propio.",
   },
 ];
 
@@ -173,7 +133,6 @@ export const ratePlans: RatePlan[] = [
 export const seasons: Season[] = [
   {
     id: "s-alta",
-    name: "Temporada alta — seca",
     from: addDays(TODAY, 14),
     to: addDays(TODAY, 75),
     adjustmentPct: 25,
@@ -181,7 +140,6 @@ export const seasons: Season[] = [
   },
   {
     id: "s-apertura",
-    name: "Apertura — tarifa de lanzamiento",
     from: addDays(TODAY, -7),
     to: addDays(TODAY, 14),
     adjustmentPct: -15,
@@ -189,7 +147,6 @@ export const seasons: Season[] = [
   },
   {
     id: "s-estandar",
-    name: "Estándar",
     from: addDays(TODAY, 75),
     to: addDays(TODAY, 180),
     adjustmentPct: 0,

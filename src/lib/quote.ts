@@ -10,6 +10,20 @@ import { addDays, diffNights, money } from "@/lib/format";
  * sin que se le mande el calendario entero del hotel.
  */
 
+/**
+ * Las etiquetas entran como parámetro en vez de escribirse aquí.
+ *
+ * El desglose se muestra en cinco idiomas, y una función de cálculo que
+ * devuelve texto en uno solo es la forma más directa de que un huésped alemán
+ * vea su total explicado en español. Aquí se calcula; el diccionario nombra.
+ */
+export type QuoteLabels = {
+  nights: (n: number, unit: string) => string;
+  directDiscount: (pct: number) => string;
+  cleaning: string;
+  tax: (pct: number) => string;
+};
+
 export type QuoteInput = {
   unitId: string;
   unitName: string;
@@ -20,6 +34,7 @@ export type QuoteInput = {
   guests: number;
   cleaningFee: number;
   directDiscount: boolean;
+  labels: QuoteLabels;
 };
 
 /** ITBMS de hospedaje en Panamá. */
@@ -40,7 +55,7 @@ export function composeQuote(input: QuoteInput): Quote | null {
 
   const lines: QuoteLine[] = [
     {
-      label: `${nights} ${nights === 1 ? "noche" : "noches"} × ${input.unitName}`,
+      label: input.labels.nights(nights, input.unitName),
       amount: money(round2(accommodation)),
       kind: "nightly",
     },
@@ -48,7 +63,7 @@ export function composeQuote(input: QuoteInput): Quote | null {
 
   if (input.directDiscount) {
     lines.push({
-      label: `Descuento por reservar directo (${Math.round(DIRECT_DISCOUNT * 100)}%)`,
+      label: input.labels.directDiscount(Math.round(DIRECT_DISCOUNT * 100)),
       amount: money(-round2(accommodation * DIRECT_DISCOUNT)),
       kind: "discount",
     });
@@ -56,13 +71,13 @@ export function composeQuote(input: QuoteInput): Quote | null {
   }
 
   if (input.cleaningFee > 0) {
-    lines.push({ label: "Limpieza final", amount: money(input.cleaningFee), kind: "fee" });
+    lines.push({ label: input.labels.cleaning, amount: money(input.cleaningFee), kind: "fee" });
   }
 
   const taxable = accommodation + input.cleaningFee;
   const tax = taxable * TAX_RATE;
   lines.push({
-    label: `ITBMS (${Math.round(TAX_RATE * 100)}%)`,
+    label: input.labels.tax(Math.round(TAX_RATE * 100)),
     amount: money(round2(tax)),
     kind: "tax",
   });

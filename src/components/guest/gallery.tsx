@@ -5,6 +5,7 @@ import Image from "next/image";
 import { ChevronLeft, ChevronRight, Grid2x2, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { useI18n } from "@/lib/i18n/provider";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 
@@ -17,6 +18,7 @@ import { cn } from "@/lib/utils";
  * un placeholder gris comunica "falta trabajo", no "hay menos fotos".
  */
 export function Gallery({ photos }: { photos: { src: string; alt: string }[] }) {
+  const { t } = useI18n();
   const [open, setOpen] = React.useState(false);
   const [index, setIndex] = React.useState(0);
 
@@ -97,7 +99,7 @@ export function Gallery({ photos }: { photos: { src: string; alt: string }[] }) 
           className="absolute bottom-4 right-4 gap-2 bg-background/90 backdrop-blur hover:bg-background"
         >
           <Grid2x2 className="size-4" aria-hidden />
-          Ver las {photos.length} fotos
+          {t.unit.seeAllPhotos(photos.length)}
         </Button>
       </div>
 
@@ -107,7 +109,7 @@ export function Gallery({ photos }: { photos: { src: string; alt: string }[] }) 
           className="max-w-none border-0 bg-black/95 p-0 sm:max-w-[min(72rem,94vw)]"
         >
           <DialogTitle className="sr-only">
-            Fotografías — {photos[index].alt}
+            {t.unit.photosOf} {photos[index].alt}
           </DialogTitle>
 
           <div className="relative flex aspect-[3/2] items-center justify-center">
@@ -126,7 +128,7 @@ export function Gallery({ photos }: { photos: { src: string; alt: string }[] }) 
               className="absolute left-3 size-11 rounded-full bg-black/45 text-white hover:bg-black/65 hover:text-white"
             >
               <ChevronLeft className="size-5" aria-hidden />
-              <span className="sr-only">Foto anterior</span>
+              <span className="sr-only">{t.unit.previousPhoto}</span>
             </Button>
             <Button
               variant="ghost"
@@ -135,7 +137,7 @@ export function Gallery({ photos }: { photos: { src: string; alt: string }[] }) 
               className="absolute right-3 size-11 rounded-full bg-black/45 text-white hover:bg-black/65 hover:text-white"
             >
               <ChevronRight className="size-5" aria-hidden />
-              <span className="sr-only">Foto siguiente</span>
+              <span className="sr-only">{t.unit.nextPhoto}</span>
             </Button>
             <Button
               variant="ghost"
@@ -144,7 +146,7 @@ export function Gallery({ photos }: { photos: { src: string; alt: string }[] }) 
               className="absolute right-3 top-3 size-10 rounded-full bg-black/45 text-white hover:bg-black/65 hover:text-white"
             >
               <X className="size-5" aria-hidden />
-              <span className="sr-only">Cerrar</span>
+              <span className="sr-only">{t.common.close}</span>
             </Button>
           </div>
 

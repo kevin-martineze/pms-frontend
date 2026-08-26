@@ -107,7 +107,10 @@ export type Unit = {
   accessibility: {
     stepFreeAccess: boolean;
     rollInShower: boolean;
+    /* Los dos idiomas van en el dato porque esto es contenido del cliente, no
+       interfaz: describe una propiedad concreta y lo escribe quien la conoce. */
     notes?: string;
+    notesEn?: string;
   };
 };
 
@@ -221,18 +224,17 @@ export type HousekeepingTask = {
 // Tarifas
 // ---------------------------------------------------------------------------
 
+/* El nombre del plan y su texto de cancelación se traducen: viven en los
+   diccionarios, indexados por este `id`. Aquí queda sólo la aritmética. */
 export type RatePlan = {
   id: string;
-  name: string;
   /** Multiplicador sobre la tarifa base de la unidad. */
   multiplier: number;
   minNights: number;
-  cancellation: string;
 };
 
 export type Season = {
   id: string;
-  name: string;
   from: IsoDate;
   to: IsoDate;
   /** % sobre la tarifa base. 0 es temporada estándar. */

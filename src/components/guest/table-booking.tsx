@@ -2,7 +2,6 @@
 
 import * as React from "react";
 import { toast } from "sonner";
-import { es } from "date-fns/locale";
 import { CalendarDays, Users } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -18,6 +17,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { formatDate, toIsoDate } from "@/lib/format";
+import { useI18n } from "@/lib/i18n/provider";
 import { cn } from "@/lib/utils";
 
 /**
@@ -30,6 +30,7 @@ import { cn } from "@/lib/utils";
  */
 
 const SLOTS = ["17:00", "18:00", "19:00", "20:00", "21:00", "22:00"];
+const PARTY_SIZES = ["2", "3", "4", "5", "6", "8", "10", "12"];
 
 /** Ocupación simulada, estable por fecha. */
 function fullSlots(date: string): Set<string> {
@@ -42,6 +43,8 @@ function fullSlots(date: string): Set<string> {
 }
 
 export function TableBooking() {
+  const { t, intlTag, dateLocale } = useI18n();
+
   const [date, setDate] = React.useState<Date | undefined>();
   const [slot, setSlot] = React.useState<string | null>(null);
   const [people, setPeople] = React.useState("4");
@@ -52,17 +55,15 @@ export function TableBooking() {
 
   function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    toast.success("Mesa apartada", {
-      description: `${people} personas el ${formatDate(iso!)} a las ${slot}. Te confirmamos por WhatsApp.`,
+    toast.success(t.sportsBar.table.confirmed, {
+      description: t.sportsBar.table.confirmedBody(people, formatDate(iso!, intlTag), slot!),
     });
   }
 
   return (
     <form onSubmit={submit} className="rounded-2xl border border-border bg-card p-5 shadow-sm">
-      <p className="display-sm text-lg">Apartar mesa</p>
-      <p className="mt-1 text-sm text-muted-foreground">
-        Las noches de partido se llena. Apartar toma quince segundos.
-      </p>
+      <p className="display-sm text-lg">{t.sportsBar.table.title}</p>
+      <p className="mt-1 text-sm text-muted-foreground">{t.sportsBar.table.lead}</p>
 
       <div className="mt-4 grid gap-3">
         <Popover open={open} onOpenChange={setOpen}>
@@ -74,10 +75,14 @@ export function TableBooking() {
               <CalendarDays className="size-4 shrink-0 text-muted-foreground" aria-hidden />
               <span>
                 <span className="block text-[0.68rem] font-medium uppercase tracking-[0.14em] text-muted-foreground">
-                  Día
+                  {t.sportsBar.table.day}
                 </span>
                 <span className="block text-sm">
-                  {iso ? formatDate(iso) : <span className="text-muted-foreground">Elige el día</span>}
+                  {iso ? (
+                    formatDate(iso, intlTag)
+                  ) : (
+                    <span className="text-muted-foreground">{t.sportsBar.table.pickDay}</span>
+                  )}
                 </span>
               </span>
             </button>
@@ -85,7 +90,7 @@ export function TableBooking() {
           <PopoverContent align="start" className="w-auto p-0">
             <Calendar
               mode="single"
-              locale={es}
+              locale={dateLocale}
               selected={date}
               onSelect={(next) => {
                 setDate(next);
@@ -99,8 +104,11 @@ export function TableBooking() {
         </Popover>
 
         <div className="grid gap-2">
-          <Label htmlFor="people" className="text-[0.68rem] uppercase tracking-[0.14em] text-muted-foreground">
-            Personas
+          <Label
+            htmlFor="people"
+            className="text-[0.68rem] uppercase tracking-[0.14em] text-muted-foreground"
+          >
+            {t.sportsBar.table.people}
           </Label>
           <Select value={people} onValueChange={setPeople}>
             <SelectTrigger id="people" className="w-full">
@@ -108,9 +116,9 @@ export function TableBooking() {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {["2", "3", "4", "5", "6", "8", "10", "12"].map((n) => (
+              {PARTY_SIZES.map((n) => (
                 <SelectItem key={n} value={n}>
-                  {n} personas
+                  {t.sportsBar.table.peopleCount(Number(n))}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -120,7 +128,7 @@ export function TableBooking() {
 
       <fieldset className="mt-4" disabled={!iso}>
         <legend className="text-[0.68rem] uppercase tracking-[0.14em] text-muted-foreground">
-          Hora
+          {t.sportsBar.table.time}
         </legend>
         <div className="mt-2 grid grid-cols-3 gap-2">
           {SLOTS.map((time) => {
@@ -137,7 +145,8 @@ export function TableBooking() {
                   slot === time
                     ? "border-primary bg-primary text-primary-foreground"
                     : "border-border hover:bg-secondary",
-                  (taken || !iso) && "cursor-not-allowed border-dashed text-muted-foreground/60 line-through hover:bg-transparent",
+                  (taken || !iso) &&
+                    "cursor-not-allowed border-dashed text-muted-foreground/60 line-through hover:bg-transparent",
                 )}
               >
                 {time}
@@ -148,12 +157,27 @@ export function TableBooking() {
       </fieldset>
 
       <div className="mt-4 grid gap-3">
-        <Input name="name" placeholder="Tu nombre" required aria-label="Tu nombre" />
-        <Input name="phone" type="tel" placeholder="WhatsApp" required aria-label="WhatsApp" />
+        <Input
+          name="name"
+          placeholder={t.sportsBar.table.yourName}
+          required
+          aria-label={t.sportsBar.table.yourName}
+        />
+        <Input
+          name="phone"
+          type="tel"
+          placeholder={t.common.whatsapp}
+          required
+          aria-label={t.common.whatsapp}
+        />
       </div>
 
       <Button type="submit" size="lg" className="mt-4 w-full" disabled={!iso || !slot}>
-        {!iso ? "Elige el día" : !slot ? "Elige la hora" : `Apartar para las ${slot}`}
+        {!iso
+          ? t.sportsBar.table.pickDay
+          : !slot
+            ? t.sportsBar.table.pickTime
+            : t.sportsBar.table.submit(slot)}
       </Button>
     </form>
   );
