@@ -403,8 +403,9 @@ export const es: Dictionary = {
       outOfScope: "Fuera del alcance de este rol",
       viewAs: "Ver el sistema como…",
       synced: "Sincronizado",
-      mockTitle: "Maqueta de propuesta",
-      mockBody: "Datos de demostración generados. Ninguna reserva de aquí es real.",
+      mockTitle: "Conectado en parte",
+      mockBody:
+        "Hoy, el calendario y las reservas corren sobre datos reales. Camarería, tarifas y reportes siguen con datos de demostración.",
     },
 
     roles: {
@@ -413,6 +414,41 @@ export const es: Dictionary = {
       "front-desk": "Recepción",
       housekeeping: "Camarería",
       restaurant: "Restaurante",
+    },
+
+    login: {
+      title: "Iniciar sesión",
+      subtitle: "Acceso solo para el personal.",
+      email: "Correo",
+      password: "Contraseña",
+      submit: "Entrar",
+      submitting: "Entrando…",
+      logout: "Cerrar sesión",
+      noAccess: "Esta cuenta no tiene acceso a Daughters of Sun.",
+      failed: "Correo o contraseña incorrectos.",
+      offline: "No se pudo conectar con el servidor.",
+    },
+
+    newBooking: {
+      cta: "Nueva reserva",
+      title: "Nueva reserva",
+      subtitle: "Elegí el tipo de habitación — el sistema asigna una libre.",
+      unitType: "Tipo de habitación",
+      checkIn: "Entrada",
+      checkOut: "Salida",
+      guests: "Huéspedes",
+      guestName: "Nombre del huésped",
+      guestEmail: "Correo",
+      guestPhone: "Teléfono",
+      save: "Crear reserva",
+      saving: "Creando…",
+      checking: "Consultando disponibilidad…",
+      invalidRange: "La salida debe ser posterior a la entrada.",
+      unitsLeft: (available, total) =>
+        available === 0
+          ? "No queda ninguna habitación de este tipo en esas fechas."
+          : `${available} de ${total} habitaciones libres en esas fechas.`,
+      created: (name) => `Reserva creada para ${name}.`,
     },
 
     status: {
@@ -552,6 +588,11 @@ export const es: Dictionary = {
         commission: "Comisión del canal",
         ownChannel: "$0 — canal propio",
         contact: "Contacto",
+        cancelCta: "Cancelar reserva",
+        checkOutCta: "Registrar salida",
+        checkedIn: (name) => `Se registró la entrada de ${name}.`,
+        checkedOut: (name) => `Se registró la salida de ${name}.`,
+        cancelled: (name) => `Se canceló la reserva de ${name}.`,
         checkInCta: "Registrar entrada",
         editCta: "Editar reserva",
         adultsChildren: (a, c) => (c > 0 ? `${a} adultos · ${c} niños` : `${a} adultos`),
@@ -564,26 +605,22 @@ export const es: Dictionary = {
       title: "Reservas",
       upcoming: "Por llegar",
       upcomingHint: "desde hoy en adelante",
-      owed: "Saldo por cobrar",
-      owedHint: "en las reservas visibles",
-      commission: "Comisión de plataformas",
-      commissionHint: "lo que se llevan Booking, Airbnb y Expedia",
+      inHouse: "En casa",
+      inHouseHint: "con entrada registrada ahora",
+      total: "Reservas",
+      totalHint: "que calzan con los filtros",
       searchPlaceholder: "Nombre, referencia o habitación",
       searchLabel: "Buscar reservas",
       allStatuses: "Todos los estados",
-      anyPayment: "Cualquier pago",
-      allChannels: "Todos los canales",
       count: (n) => (n === 1 ? "1 reserva" : `${n} reservas`),
       colGuest: "Huésped",
       colRoom: "Hab.",
       colUnit: "Unidad",
       colDates: "Fechas",
       colNights: "Noches",
+      colGuests: "Huéspedes",
       colStatus: "Estado",
-      colPayment: "Pago",
-      colChannel: "Canal",
       colTotal: "Total",
-      colBalance: "Saldo",
       empty: "Ninguna reserva calza con esos filtros.",
       truncated: (shown, total) =>
         `Mostrando las primeras ${shown} de ${total}. En producción esto pagina desde el servidor.`,
@@ -619,38 +656,17 @@ export const es: Dictionary = {
       unit: "Unidad",
       baseRate: (rate, count) =>
         `base ${rate} · ${count} ${count === 1 ? "llave" : "llaves"}`,
-      taxNote:
-        "Los precios se muestran sin ITBMS. El fin de semana lleva +22% sobre la tarifa de la temporada vigente.",
-      plansTitle: "Planes tarifarios",
+      taxNote: "Los precios se muestran sin ITBMS, que se suma al cotizar.",
+      plansTitle: "Temporadas y planes tarifarios",
       plansLead:
-        "Cada plan es un multiplicador sobre la tarifa de arriba y sus propias reglas de cancelación.",
-      planBase: "Base",
+        "Un plan fija el precio por noche de un rango de fechas. Si dos se superponen, gana el más corto — así una semana de feriado puede sobrescribir a la temporada que la rodea.",
       minNights: (n) => `Mín. ${n} ${n === 1 ? "noche" : "noches"}`,
-      directOnly: "Sólo sitio propio",
-      standard: "Estándar",
-      plans: {
-        "rp-flex": {
-          name: "Tarifa flexible",
-          cancellation: "Cancelación gratis hasta 48 h antes",
-        },
-        "rp-nonref": {
-          name: "No reembolsable",
-          cancellation: "Sin reembolso. Se cobra el total al reservar.",
-        },
-        "rp-week": {
-          name: "Estancia larga (7+ noches)",
-          cancellation: "Cancelación gratis hasta 7 días antes",
-        },
-        "rp-direct": {
-          name: "Directo — mejor precio",
-          cancellation: "Cancelación gratis hasta 24 h antes. Solo en el sitio propio.",
-        },
-      },
-      seasons: {
-        "s-alta": "Temporada alta — seca",
-        "s-apertura": "Apertura — tarifa de lanzamiento",
-        "s-estandar": "Estándar",
-      },
+      standard: "Tarifa base",
+      noPlans: "Todavía no hay planes tarifarios. Cada noche se vende a la tarifa base de la unidad.",
+      weekendRate: (rate) => `${rate} vie y sáb`,
+      closedPlan: "Cerrado a la venta",
+      planRange: (from, to) => `${from} → ${to}`,
+      base: "Tarifa base",
     },
 
     reports: {

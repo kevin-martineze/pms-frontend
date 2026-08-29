@@ -56,7 +56,9 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  /* Fuera: los internos de Next, los estáticos y las fotos. Redirigir
-     /photos/x.jpg a /en/photos/x.jpg rompería todas las imágenes. */
-  matcher: ["/((?!_next|photos|favicon.ico|.*\\.[\\w]+$).*)"],
+  /* Fuera: los internos de Next, los estáticos, las fotos y las rutas de API.
+     Redirigir /photos/x.jpg a /en/photos/x.jpg rompería todas las imágenes, y
+     /api/session a /en/api/session rompe el login: esas rutas no viven bajo
+     `[lang]` porque no tienen idioma — hablan JSON, no texto para leer. */
+  matcher: ["/((?!_next|api|photos|favicon.ico|.*\\.[\\w]+$).*)"],
 };

@@ -394,8 +394,9 @@ export const en = {
       outOfScope: "Outside this role's scope",
       viewAs: "View the system as…",
       synced: "Synced",
-      mockTitle: "Proposal mockup",
-      mockBody: "Generated demonstration data. No booking here is real.",
+      mockTitle: "Partly connected",
+      mockBody:
+        "Today, the calendar and bookings run on live data. Housekeeping, rates and reports are still demonstration data.",
     },
 
     roles: {
@@ -404,6 +405,41 @@ export const en = {
       "front-desk": "Front desk",
       housekeeping: "Housekeeping",
       restaurant: "Restaurant",
+    },
+
+    login: {
+      title: "Sign in",
+      subtitle: "Staff access only.",
+      email: "Email",
+      password: "Password",
+      submit: "Sign in",
+      submitting: "Signing in…",
+      logout: "Log out",
+      noAccess: "This account has no access to Daughters of Sun.",
+      failed: "Wrong email or password.",
+      offline: "Could not reach the server.",
+    },
+
+    newBooking: {
+      cta: "New booking",
+      title: "New booking",
+      subtitle: "Pick the room type — the system assigns a free room for you.",
+      unitType: "Room type",
+      checkIn: "Check-in",
+      checkOut: "Check-out",
+      guests: "Guests",
+      guestName: "Guest name",
+      guestEmail: "Email",
+      guestPhone: "Phone",
+      save: "Create booking",
+      saving: "Creating…",
+      checking: "Checking availability…",
+      invalidRange: "Check-out must be after check-in.",
+      unitsLeft: (available: number, total: number) =>
+        available === 0
+          ? "No rooms of this type are free on those dates."
+          : `${available} of ${total} rooms free on those dates.`,
+      created: (name: string) => `Booking created for ${name}.`,
     },
 
     status: {
@@ -541,6 +577,11 @@ export const en = {
         commission: "Channel commission",
         ownChannel: "$0 — own channel",
         contact: "Contact",
+        cancelCta: "Cancel booking",
+        checkOutCta: "Check out",
+        checkedIn: (name: string) => `${name} checked in.`,
+        checkedOut: (name: string) => `${name} checked out.`,
+        cancelled: (name: string) => `${name}'s booking was cancelled.`,
         checkInCta: "Check in",
         editCta: "Edit booking",
         adultsChildren: (a: number, c: number) =>
@@ -554,26 +595,22 @@ export const en = {
       title: "Bookings",
       upcoming: "Upcoming",
       upcomingHint: "from today onwards",
-      owed: "Outstanding balance",
-      owedHint: "across the visible bookings",
-      commission: "Platform commission",
-      commissionHint: "what Booking, Airbnb and Expedia take",
+      inHouse: "In house",
+      inHouseHint: "checked in right now",
+      total: "Bookings",
+      totalHint: "matching the current filters",
       searchPlaceholder: "Name, reference or room",
       searchLabel: "Search bookings",
       allStatuses: "All statuses",
-      anyPayment: "Any payment",
-      allChannels: "All channels",
       count: (n: number) => (n === 1 ? "1 booking" : `${n} bookings`),
       colGuest: "Guest",
       colRoom: "Room",
       colUnit: "Unit",
       colDates: "Dates",
       colNights: "Nights",
+      colGuests: "Guests",
       colStatus: "Status",
-      colPayment: "Payment",
-      colChannel: "Channel",
       colTotal: "Total",
-      colBalance: "Balance",
       empty: "No booking matches those filters.",
       truncated: (shown: number, total: number) =>
         `Showing the first ${shown} of ${total}. In production this paginates from the server.`,
@@ -608,35 +645,17 @@ export const en = {
       unit: "Unit",
       baseRate: (rate: string, count: number) =>
         `base ${rate} · ${count} ${count === 1 ? "key" : "keys"}`,
-      taxNote:
-        "Prices shown without ITBMS. Weekends carry +22% over the rate for the current season.",
-      plansTitle: "Rate plans",
+      taxNote: "Prices shown without ITBMS, which is added at checkout.",
+      plansTitle: "Seasons and rate plans",
       plansLead:
-        "Each plan is a multiplier on the table above, with its own cancellation rules.",
-      planBase: "Base",
+        "A plan sets the nightly price for a date range. Where two overlap, the shorter one wins — so a holiday week can override the season around it.",
       minNights: (n: number) => `Min. ${n} ${n === 1 ? "night" : "nights"}`,
-      directOnly: "Own site only",
-      standard: "Standard",
-      plans: {
-        "rp-flex": { name: "Flexible rate", cancellation: "Free cancellation up to 48 h before" },
-        "rp-nonref": {
-          name: "Non-refundable",
-          cancellation: "No refund. Charged in full at booking.",
-        },
-        "rp-week": {
-          name: "Long stay (7+ nights)",
-          cancellation: "Free cancellation up to 7 days before",
-        },
-        "rp-direct": {
-          name: "Direct — best price",
-          cancellation: "Free cancellation up to 24 h before. Own site only.",
-        },
-      },
-      seasons: {
-        "s-alta": "High season — dry",
-        "s-apertura": "Opening — launch rate",
-        "s-estandar": "Standard",
-      },
+      standard: "Base rate",
+      noPlans: "No rate plans yet. Every night sells at the unit's base rate.",
+      weekendRate: (rate: string) => `${rate} Fri & Sat`,
+      closedPlan: "Closed for sale",
+      planRange: (from: string, to: string) => `${from} → ${to}`,
+      base: "Base rate",
     },
 
     reports: {
