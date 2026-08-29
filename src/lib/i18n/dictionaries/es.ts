@@ -664,6 +664,7 @@ export const es: Dictionary = {
       searchLabel: "Buscar reservas",
       allStatuses: "Todos los estados",
       count: (n) => (n === 1 ? "1 reserva" : `${n} reservas`),
+      openRow: (name) => `Abrir la reserva de ${name}`,
       colGuest: "Huésped",
       colRoom: "Hab.",
       colUnit: "Unidad",

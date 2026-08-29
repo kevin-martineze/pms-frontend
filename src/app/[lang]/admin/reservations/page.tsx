@@ -2,27 +2,18 @@ import { Suspense } from "react";
 import type { Metadata } from "next";
 import { lang } from "next/root-params";
 
-import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { STATUS_CLASS } from "@/components/admin/labels";
 import { NewBookingDialog } from "@/components/admin/new-booking-dialog";
 import { ReservationFilters } from "@/components/admin/reservation-filters";
+import { ReservationsTable } from "@/components/admin/reservations-table";
 import { StatCard } from "@/components/admin/stat-card";
 import { getBookings, getUnitTypes } from "@/lib/api/server";
 import { NoAccess } from "@/components/admin/no-access";
 import { canAccess } from "@/lib/auth/access";
 import { getSession } from "@/lib/auth/server-session";
 import { toReservation } from "@/lib/bookings/mapper";
-import { formatDateShort, formatMoney, toIsoDate } from "@/lib/format";
-import { getDictionary, intlTag, resolveLocale } from "@/lib/i18n";
+import { toIsoDate } from "@/lib/format";
+import { getDictionary, resolveLocale } from "@/lib/i18n";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = getDictionary(resolveLocale(await lang()));
@@ -39,7 +30,6 @@ export default async function ReservationsPage({
   const params = await searchParams;
   const locale = resolveLocale(await lang());
   const t = getDictionary(locale);
-  const tag = intlTag(locale);
 
   const session = await getSession();
   if (!session) return null;
@@ -126,58 +116,13 @@ export default async function ReservationsPage({
 
       <div className="mt-4 overflow-hidden rounded-xl border border-border bg-card">
         <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="min-w-[13rem]">{t.admin.reservations.colGuest}</TableHead>
-                <TableHead>{t.admin.reservations.colRoom}</TableHead>
-                <TableHead className="min-w-[11rem]">{t.admin.reservations.colUnit}</TableHead>
-                <TableHead>{t.admin.reservations.colDates}</TableHead>
-                <TableHead className="text-right">{t.admin.reservations.colNights}</TableHead>
-                <TableHead className="text-right">{t.admin.reservations.colGuests}</TableHead>
-                <TableHead>{t.admin.reservations.colStatus}</TableHead>
-                <TableHead className="text-right">{t.admin.reservations.colTotal}</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filtered.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={8} className="py-14 text-center text-muted-foreground">
-                    {t.admin.reservations.empty}
-                  </TableCell>
-                </TableRow>
-              ) : (
-                filtered.slice(0, 80).map((reservation) => (
-                  <TableRow key={reservation.id}>
-                    <TableCell>
-                      <span className="block font-medium">{reservation.guest.name}</span>
-                      <span className="block font-mono text-xs text-muted-foreground">
-                        {reservation.reference}
-                      </span>
-                    </TableCell>
-                    <TableCell className="tnum font-medium">{reservation.room}</TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {typeName.get(reservation.unitId) ?? ""}
-                    </TableCell>
-                    <TableCell className="tnum whitespace-nowrap text-muted-foreground">
-                      {formatDateShort(reservation.range.checkIn, tag)} →{" "}
-                      {formatDateShort(reservation.range.checkOut, tag)}
-                    </TableCell>
-                    <TableCell className="tnum text-right">{reservation.nights}</TableCell>
-                    <TableCell className="tnum text-right">{reservation.guests}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className={STATUS_CLASS[reservation.status]}>
-                        {t.admin.status[reservation.status]}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="tnum text-right">
-                      {formatMoney(reservation.total, tag)}
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+          <ReservationsTable
+            reservations={filtered}
+            typeNames={Object.fromEntries(
+              filtered.map((r) => [r.unitId, typeName.get(r.unitId) ?? ""]),
+            )}
+            limit={80}
+          />
         </div>
       </div>
 

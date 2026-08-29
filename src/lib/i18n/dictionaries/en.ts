@@ -651,6 +651,7 @@ export const en = {
       searchLabel: "Search bookings",
       allStatuses: "All statuses",
       count: (n: number) => (n === 1 ? "1 booking" : `${n} bookings`),
+      openRow: (name: string) => `Open ${name}'s booking`,
       colGuest: "Guest",
       colRoom: "Room",
       colUnit: "Unit",
