@@ -1,13 +1,14 @@
 "use client";
 
 import * as React from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   BrushCleaning,
   CalendarDays,
   ChartNoAxesColumn,
   ChevronsUpDown,
   LayoutDashboard,
+  LogOut,
   Lock,
   Menu,
   Tags,
@@ -28,7 +29,9 @@ import {
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { LocaleLink } from "@/components/locale-link";
-import { ROLE_ACCESS, staff } from "@/lib/mock/operations";
+import { mapMemberRole } from "@/lib/auth/roles";
+import type { SessionSummary } from "@/lib/auth/types";
+import { ROLE_ACCESS } from "@/lib/mock/operations";
 import { withLocale } from "@/lib/i18n/paths";
 import { useI18n } from "@/lib/i18n/provider";
 import type { StaffRole } from "@/lib/domain/types";
@@ -37,14 +40,11 @@ import { cn } from "@/lib/utils";
 /**
  * Shell del sistema de gestión.
  *
- * El selector de rol es la pieza que vende el producto. El cliente dijo dos
- * cosas en la misma conversación: que quiere trabajar veinte horas en vez de
- * cuarenta, y que quiere ser gerente. Las dos dependen de que su gente pueda
- * operar el hotel sin él — y eso no se explica con una diapositiva, se
- * demuestra cambiando de rol y viendo cómo el menú se encoge.
- *
- * En producción los permisos los impone el servidor. Este selector es la
- * maqueta de lo que el servidor va a hacer, no un sustituto.
+ * Antes tenía un selector "ver el sistema como…" sobre datos de staff
+ * inventados. Ahora corre sobre la sesión real de bookings-api: el rol viene
+ * de la Membership del usuario logueado, no de una lista mock. `ROLE_ACCESS`
+ * sigue siendo el mapa de permisos por rol — eso no era mock, era la regla de
+ * negocio, y sigue valiendo con roles reales.
  */
 
 const NAV = [
@@ -61,19 +61,44 @@ type NavKey = (typeof NAV)[number]["key"];
 const RoleContext = React.createContext<StaffRole>("owner");
 export const useRole = () => React.useContext(RoleContext);
 
-export function AdminShell({ children }: { children: React.ReactNode }) {
+function initialsFor(name: string): string {
+  const clean = name.replace(/\(.*?\)/g, "").trim();
+  const parts = clean.split(/\s+/).filter(Boolean);
+  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+  return (parts[0] ?? "?").slice(0, 2).toUpperCase();
+}
+
+export function AdminShell({
+  children,
+  session,
+}: {
+  children: React.ReactNode;
+  session: SessionSummary;
+}) {
   const { t } = useI18n();
-  const [staffId, setStaffId] = React.useState("s-julius");
-  const current = staff.find((s) => s.id === staffId) ?? staff[0];
-  const allowed = new Set(ROLE_ACCESS[current.role]);
+  const router = useRouter();
+  const role = mapMemberRole(session.role);
+  const allowed = new Set(ROLE_ACCESS[role]);
+  const displayName = session.user.fullName ?? session.user.email;
+
+  async function handleLogout() {
+    await fetch("/api/session", { method: "DELETE" });
+    router.refresh();
+  }
 
   return (
-    <RoleContext.Provider value={current.role}>
-      <div className="flex min-h-dvh bg-background">
-        <SidebarNav allowed={allowed} className="hidden w-60 shrink-0 lg:flex" />
+    <RoleContext.Provider value={role}>
+      {/* `h-dvh` + `overflow-hidden` fija el shell a la altura del viewport: sin
+          esto el documento entero scrollea (el sidebar se va con el contenido)
+          en vez de que el scroll quede contenido en `<main>`. */}
+      <div className="flex h-dvh overflow-hidden bg-background">
+        <SidebarNav
+          allowed={allowed}
+          className="hidden w-60 shrink-0 overflow-y-auto lg:flex"
+        />
 
-        <div className="flex min-w-0 flex-1 flex-col">
-          <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-border bg-background/90 px-4 backdrop-blur">
+        <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+          <header className="flex h-14 shrink-0 items-center gap-3 border-b border-border bg-background/90 px-4 backdrop-blur">
             <Sheet>
               <SheetTrigger asChild>
                 <Button variant="ghost" size="icon" className="lg:hidden">
@@ -89,7 +114,9 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
               </SheetContent>
             </Sheet>
 
-            <span className="text-sm text-muted-foreground">Don Julius · David, Chiriquí</span>
+            <span className="truncate text-sm text-muted-foreground">
+              {session.propertyName}
+            </span>
 
             <div className="ml-auto flex items-center gap-2">
               <Badge variant="outline" className="hidden gap-1.5 sm:flex">
@@ -102,49 +129,36 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
                   <Button variant="ghost" className="h-9 gap-2 pl-1.5 pr-2">
                     <Avatar className="size-7">
                       <AvatarFallback className="bg-palm text-[0.7rem] text-white">
-                        {current.initials}
+                        {initialsFor(displayName)}
                       </AvatarFallback>
                     </Avatar>
                     <span className="hidden text-left leading-tight sm:block">
-                      <span className="block text-xs font-medium">{current.name}</span>
+                      <span className="block text-xs font-medium">{displayName}</span>
                       <span className="block text-[0.68rem] text-muted-foreground">
-                        {t.admin.roles[current.role]}
+                        {t.admin.roles[role]}
                       </span>
                     </span>
                     <ChevronsUpDown className="size-3.5 text-muted-foreground" aria-hidden />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-64">
+                <DropdownMenuContent align="end" className="w-56">
                   <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
-                    {t.admin.nav.viewAs}
+                    {session.user.email}
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  {staff.map((member) => (
-                    <DropdownMenuItem
-                      key={member.id}
-                      onSelect={() => setStaffId(member.id)}
-                      className="gap-2.5"
-                    >
-                      <Avatar className="size-6">
-                        <AvatarFallback className="bg-secondary text-[0.6rem]">
-                          {member.initials}
-                        </AvatarFallback>
-                      </Avatar>
-                      <span className="flex-1">
-                        <span className="block text-sm">{member.name}</span>
-                        <span className="block text-xs text-muted-foreground">
-                          {t.admin.roles[member.role]}
-                          {member.shift ? ` · ${member.shift}` : ""}
-                        </span>
-                      </span>
-                    </DropdownMenuItem>
-                  ))}
+                  <DropdownMenuItem
+                    onSelect={() => void handleLogout()}
+                    className="gap-2.5 text-destructive"
+                  >
+                    <LogOut className="size-4" aria-hidden />
+                    {t.admin.login.logout}
+                  </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
           </header>
 
-          <main className="min-w-0 flex-1 pb-24">{children}</main>
+          <main className="min-w-0 flex-1 overflow-y-auto pb-24">{children}</main>
         </div>
       </div>
     </RoleContext.Provider>
