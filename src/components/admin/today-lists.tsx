@@ -7,6 +7,8 @@ import { BadgeCheck, LogIn, LogOut, MessageCircle, TriangleAlert } from "lucide-
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { useRole } from "@/components/admin/admin-shell";
+import { checkInBooking, checkOutBooking } from "@/lib/bookings/actions";
 import { formatMoney } from "@/lib/format";
 import { useI18n } from "@/lib/i18n/provider";
 import type { Reservation } from "@/lib/domain/types";
@@ -17,8 +19,13 @@ import { cn } from "@/lib/utils";
  *
  * Es la pantalla que recepción tiene abierta todo el turno, así que cada fila
  * lleva lo que hace falta para atender sin abrir la reserva: quién viene, en qué
- * habitación, qué debe y por dónde llegó. El botón hace la acción del turno —
- * no abre un formulario de siete campos.
+ * habitación y qué debe. El botón hace la acción del turno — no abre un
+ * formulario de siete campos.
+ *
+ * Los botones llaman a la API de verdad. El estado que se ve sale del servidor,
+ * no de un `useState` local: si el registro falla, la fila NO puede quedar
+ * marcada como hecha. Una entrada que la pantalla da por registrada y la base
+ * no tiene es un huésped que figura como no llegado con la llave en la mano.
  */
 
 type Props = {
@@ -28,22 +35,11 @@ type Props = {
 
 export function TodayLists({ arrivals, departures }: Props) {
   const { t, intlTag } = useI18n();
-  const [checkedIn, setCheckedIn] = React.useState<Set<string>>(new Set());
-  const [checkedOut, setCheckedOut] = React.useState<Set<string>>(new Set());
+  const role = useRole();
 
-  function doCheckIn(reservation: Reservation) {
-    setCheckedIn((prev) => new Set(prev).add(reservation.id));
-    toast.success(t.admin.dashboard.checkInToast(reservation.guest.name), {
-      description: t.admin.dashboard.checkInToastBody(reservation.room ?? ""),
-    });
-  }
-
-  function doCheckOut(reservation: Reservation) {
-    setCheckedOut((prev) => new Set(prev).add(reservation.id));
-    toast.success(t.admin.dashboard.checkOutToast(reservation.guest.name), {
-      description: t.admin.dashboard.checkOutToastBody(reservation.room ?? ""),
-    });
-  }
+  /* Camarería no registra entradas ni salidas. La API igual lo rechaza con 403;
+     esto es para no ofrecer un botón que no va a funcionar. */
+  const canOperate = role !== "housekeeping";
 
   return (
     <div className="grid gap-5 xl:grid-cols-2">
@@ -54,7 +50,7 @@ export function TodayLists({ arrivals, departures }: Props) {
         empty={t.admin.dashboard.noArrivals}
       >
         {arrivals.map((reservation) => {
-          const done = checkedIn.has(reservation.id);
+          const done = reservation.status === "in-house";
           return (
             <Row key={reservation.id} reservation={reservation} done={done} intlTag={intlTag}>
               {done ? (
@@ -66,9 +62,14 @@ export function TodayLists({ arrivals, departures }: Props) {
                   {t.admin.dashboard.checkedIn}
                 </Badge>
               ) : (
-                <Button size="sm" onClick={() => doCheckIn(reservation)}>
-                  {t.admin.dashboard.checkIn}
-                </Button>
+                canOperate && (
+                  <TransitionButton
+                    action={() => checkInBooking(reservation.id)}
+                    label={t.admin.dashboard.checkIn}
+                    successTitle={t.admin.dashboard.checkInToast(reservation.guest.name)}
+                    successBody={t.admin.dashboard.checkInToastBody(reservation.room ?? "")}
+                  />
+                )
               )}
             </Row>
           );
@@ -82,7 +83,7 @@ export function TodayLists({ arrivals, departures }: Props) {
         empty={t.admin.dashboard.noDepartures}
       >
         {departures.map((reservation) => {
-          const done = checkedOut.has(reservation.id) || reservation.status === "checked-out";
+          const done = reservation.status === "checked-out";
           return (
             <Row key={reservation.id} reservation={reservation} done={done} intlTag={intlTag}>
               {done ? (
@@ -91,15 +92,58 @@ export function TodayLists({ arrivals, departures }: Props) {
                   {t.admin.dashboard.checkedOut}
                 </Badge>
               ) : (
-                <Button size="sm" variant="outline" onClick={() => doCheckOut(reservation)}>
-                  {t.admin.dashboard.checkOut}
-                </Button>
+                canOperate && (
+                  <TransitionButton
+                    variant="outline"
+                    action={() => checkOutBooking(reservation.id)}
+                    label={t.admin.dashboard.checkOut}
+                    successTitle={t.admin.dashboard.checkOutToast(reservation.guest.name)}
+                    successBody={t.admin.dashboard.checkOutToastBody(reservation.room ?? "")}
+                  />
+                )
               )}
             </Row>
           );
         })}
       </Panel>
     </div>
+  );
+}
+
+/**
+ * Botón de transición de estado.
+ *
+ * El toast de éxito sale DESPUÉS de que la API confirmó, y si falla muestra el
+ * mensaje real que devolvió el servidor ("no se puede pasar de CHECKED_IN a
+ * CHECKED_IN") en vez de un error genérico.
+ */
+function TransitionButton({
+  action,
+  label,
+  successTitle,
+  successBody,
+  variant,
+}: {
+  action: () => Promise<{ ok: true } | { ok: false; error: string }>;
+  label: string;
+  successTitle: string;
+  successBody: string;
+  variant?: "outline";
+}) {
+  const [pending, startTransition] = React.useTransition();
+
+  function run() {
+    startTransition(async () => {
+      const result = await action();
+      if (result.ok) toast.success(successTitle, { description: successBody });
+      else toast.error(result.error);
+    });
+  }
+
+  return (
+    <Button size="sm" variant={variant} disabled={pending} onClick={run}>
+      {label}
+    </Button>
   );
 }
 
@@ -146,7 +190,8 @@ function Row({
   children: React.ReactNode;
 }) {
   const { t } = useI18n();
-  const owes = reservation.balance.amountMinor > 0;
+  const balance = reservation.balance;
+  const owes = (balance?.amountMinor ?? 0) > 0;
   const digits = reservation.guest.phone.replace(/[^0-9]/g, "");
 
   return (
@@ -164,9 +209,9 @@ function Row({
       <div className="min-w-0 flex-1">
         <p className="flex items-center gap-2 truncate text-sm font-medium">
           {reservation.guest.name}
-          {reservation.guest.previousStays > 0 && (
+          {(reservation.guest.previousStays ?? 0) > 0 && (
             <span className="shrink-0 rounded-full bg-butter/25 px-1.5 py-0.5 text-[0.62rem] font-medium text-accent-foreground">
-              {t.admin.dashboard.nthStay(reservation.guest.previousStays + 1)}
+              {t.admin.dashboard.nthStay((reservation.guest.previousStays ?? 0) + 1)}
             </span>
           )}
         </p>
@@ -175,21 +220,28 @@ function Row({
             {t.common.room} {reservation.room}
           </span>
           <span>{t.common.nights(reservation.nights)}</span>
-          <span>{t.admin.channels[reservation.channel]}</span>
-          {owes && (
+          {reservation.channel && <span>{t.admin.channels[reservation.channel]}</span>}
+          {owes && balance && (
             <span className="tnum flex items-center gap-1 text-status-departing">
               <TriangleAlert className="size-3" aria-hidden />
-              {t.admin.dashboard.owes(formatMoney(reservation.balance, intlTag))}
+              {t.admin.dashboard.owes(formatMoney(balance, intlTag))}
             </span>
           )}
         </p>
       </div>
 
-      <Button variant="ghost" size="icon" className="size-8 shrink-0 text-muted-foreground" asChild>
-        <a href={`https://wa.me/${digits}`} aria-label={t.admin.dashboard.writeWhatsapp}>
-          <MessageCircle className="size-4" aria-hidden />
-        </a>
-      </Button>
+      {digits && (
+        <Button
+          variant="ghost"
+          size="icon"
+          className="size-8 shrink-0 text-muted-foreground"
+          asChild
+        >
+          <a href={`https://wa.me/${digits}`} aria-label={t.admin.dashboard.writeWhatsapp}>
+            <MessageCircle className="size-4" aria-hidden />
+          </a>
+        </Button>
+      )}
 
       <div className="shrink-0">{children}</div>
     </li>

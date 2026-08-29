@@ -1,13 +1,16 @@
 "use client";
 
 import * as React from "react";
-import { ChevronLeft, ChevronRight, MessageCircle, TriangleAlert } from "lucide-react";
+import { toast } from "sonner";
+import { ChevronLeft, ChevronRight, TriangleAlert } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { CHANNEL_COMMISSION, PAYMENT_CLASS, STATUS_CLASS } from "@/components/admin/labels";
+import { PAYMENT_CLASS, STATUS_CLASS } from "@/components/admin/labels";
+import { useRole } from "@/components/admin/admin-shell";
+import { cancelBooking, checkInBooking, checkOutBooking } from "@/lib/bookings/actions";
 import {
   diffNights,
   formatDate,
@@ -251,7 +254,7 @@ export function TapeChart({
                           intlTag,
                         )} → ${formatDate(reservation.range.checkOut, intlTag)}`}
                       >
-                        {reservation.balance.amountMinor > 0 && (
+                        {(reservation.balance?.amountMinor ?? 0) > 0 && (
                           <TriangleAlert className="size-3 shrink-0 opacity-90" aria-hidden />
                         )}
                         <span className="truncate">{reservation.guest.name}</span>
@@ -295,16 +298,17 @@ function ReservationSheet({
             </SheetHeader>
 
             <div className="flex-1 space-y-5 overflow-y-auto px-5 py-5">
+              {/* Pago, canal y comisión no se muestran: el backend todavía no
+                  registra pagos ni distingue OTAs. Un badge "sin pagar" que en
+                  realidad significa "no sabemos" es peor que no mostrarlo —
+                  recepción cobraría dos veces. Vuelven con el módulo de pagos. */}
               <div className="flex flex-wrap gap-2">
                 <Badge variant="outline" className={STATUS_CLASS[reservation.status]}>
                   {t.admin.status[reservation.status]}
                 </Badge>
-                <Badge variant="outline" className={PAYMENT_CLASS[reservation.payment]}>
-                  {t.admin.payment[reservation.payment]}
-                </Badge>
-                {reservation.guest.previousStays > 0 && (
-                  <Badge variant="secondary">
-                    {t.admin.dashboard.nthStay(reservation.guest.previousStays + 1)}
+                {reservation.payment && (
+                  <Badge variant="outline" className={PAYMENT_CLASS[reservation.payment]}>
+                    {t.admin.payment[reservation.payment]}
                   </Badge>
                 )}
               </div>
@@ -322,12 +326,7 @@ function ReservationSheet({
                   term={s.checkOut}
                   detail={`${formatDate(reservation.range.checkOut, intlTag)} · 11:00`}
                 />
-                <Item
-                  term={s.guests}
-                  detail={s.adultsChildren(reservation.adults, reservation.children)}
-                />
-                <Item term={s.channel} detail={t.admin.channels[reservation.channel]} />
-                <Item term={s.country} detail={reservation.guest.country} />
+                <Item term={s.guests} detail={t.common.guests(reservation.guests)} />
                 <Item term={s.bookedOn} detail={formatDate(reservation.createdAt, intlTag)} />
               </dl>
 
@@ -335,33 +334,13 @@ function ReservationSheet({
 
               <dl className="space-y-3 text-sm">
                 <Item term={s.total} detail={formatMoney(reservation.total, intlTag)} strong />
-                <Item
-                  term={s.balance}
-                  detail={formatMoney(reservation.balance, intlTag)}
-                  tone={reservation.balance.amountMinor > 0 ? "warning" : "ok"}
-                />
-                {/* La comisión se muestra siempre, incluso cuando es cero. Ver el
-                    $0 del canal propio al lado del 17% de Booking es el argumento
-                    entero de la estrategia comercial, y no se puede ver si sólo
-                    aparece cuando hay comisión que pagar. */}
-                <Item
-                  term={s.commission}
-                  detail={
-                    CHANNEL_COMMISSION[reservation.channel] === 0
-                      ? s.ownChannel
-                      : `${formatMoney(
-                          {
-                            amountMinor: Math.round(
-                              reservation.total.amountMinor *
-                                CHANNEL_COMMISSION[reservation.channel],
-                            ),
-                            currency: reservation.total.currency,
-                          },
-                          intlTag,
-                        )} (${Math.round(CHANNEL_COMMISSION[reservation.channel] * 100)}%)`
-                  }
-                  tone={CHANNEL_COMMISSION[reservation.channel] === 0 ? "ok" : "warning"}
-                />
+                {reservation.balance && (
+                  <Item
+                    term={s.balance}
+                    detail={formatMoney(reservation.balance, intlTag)}
+                    tone={reservation.balance.amountMinor > 0 ? "warning" : "ok"}
+                  />
+                )}
               </dl>
 
               <Separator />
@@ -369,25 +348,90 @@ function ReservationSheet({
               <div className="space-y-1 text-sm">
                 <p className="text-muted-foreground">{s.contact}</p>
                 <p>{reservation.guest.email}</p>
-                <p className="tnum">{reservation.guest.phone}</p>
+                {reservation.guest.phone && <p className="tnum">{reservation.guest.phone}</p>}
               </div>
             </div>
 
-            <div className="grid gap-2 border-t border-border p-4 sm:grid-cols-2">
-              <Button variant="outline" className="gap-2" asChild>
-                <a href={`https://wa.me/${reservation.guest.phone.replace(/[^0-9]/g, "")}`}>
-                  <MessageCircle className="size-4" aria-hidden />
-                  {t.common.whatsapp}
-                </a>
-              </Button>
-              <Button>
-                {reservation.status === "confirmed" ? s.checkInCta : s.editCta}
-              </Button>
-            </div>
+            <SheetActions reservation={reservation} onDone={onClose} />
           </>
         )}
       </SheetContent>
     </Sheet>
+  );
+}
+
+/**
+ * Acciones sobre la reserva abierta.
+ *
+ * Se ofrece sólo lo que la máquina de estados permite desde el estado actual:
+ * una reserva ya cerrada no muestra botones que la API va a rechazar. Camarería
+ * no ve ninguno.
+ */
+function SheetActions({
+  reservation,
+  onDone,
+}: {
+  reservation: Reservation;
+  onDone: () => void;
+}) {
+  const { t } = useI18n();
+  const s = t.admin.calendar.sheet;
+  const role = useRole();
+  const [pending, startTransition] = React.useTransition();
+
+  if (role === "housekeeping") return null;
+
+  const canCheckIn = reservation.status === "confirmed";
+  const canCheckOut = reservation.status === "in-house";
+  const canCancel = reservation.status === "confirmed" || reservation.status === "pending";
+  if (!canCheckIn && !canCheckOut && !canCancel) return null;
+
+  function run(action: () => Promise<{ ok: true } | { ok: false; error: string }>, success: string) {
+    startTransition(async () => {
+      const result = await action();
+      if (result.ok) {
+        toast.success(success);
+        onDone();
+      } else {
+        toast.error(result.error);
+      }
+    });
+  }
+
+  return (
+    <div className="grid gap-2 border-t border-border p-4 sm:grid-cols-2">
+      {canCancel && (
+        <Button
+          variant="outline"
+          disabled={pending}
+          onClick={() =>
+            run(() => cancelBooking(reservation.id), s.cancelled(reservation.guest.name))
+          }
+        >
+          {s.cancelCta}
+        </Button>
+      )}
+      {canCheckIn && (
+        <Button
+          disabled={pending}
+          onClick={() =>
+            run(() => checkInBooking(reservation.id), s.checkedIn(reservation.guest.name))
+          }
+        >
+          {s.checkInCta}
+        </Button>
+      )}
+      {canCheckOut && (
+        <Button
+          disabled={pending}
+          onClick={() =>
+            run(() => checkOutBooking(reservation.id), s.checkedOut(reservation.guest.name))
+          }
+        >
+          {s.checkOutCta}
+        </Button>
+      )}
+    </div>
   );
 }
 

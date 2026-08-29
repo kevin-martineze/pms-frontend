@@ -88,6 +88,10 @@ export default async function ReportsPage() {
   const countries = new Map<string, number>();
   for (const r of reservations) {
     if (r.range.checkIn < from || r.range.checkIn >= to) continue;
+    /* La nacionalidad es opcional desde que el tipo refleja lo que la API
+       guarda de verdad. Esta pantalla todavía corre sobre datos de
+       demostración, donde siempre viene. */
+    if (!r.guest.country) continue;
     countries.set(r.guest.country, (countries.get(r.guest.country) ?? 0) + 1);
   }
   const topCountries = [...countries.entries()].sort((a, b) => b[1] - a[1]).slice(0, 6);

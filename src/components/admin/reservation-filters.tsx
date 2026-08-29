@@ -36,7 +36,7 @@ export function ReservationFilters({ total }: { total: number }) {
   }
 
   const q = params.get("q") ?? "";
-  const active = params.get("status") || params.get("payment") || params.get("channel") || q;
+  const active = params.get("status") || q;
 
   return (
     <div className="flex flex-wrap items-center gap-2">
@@ -68,33 +68,9 @@ export function ReservationFilters({ total }: { total: number }) {
         </SelectContent>
       </Select>
 
-      <Select value={params.get("payment") ?? "all"} onValueChange={(v) => set("payment", v)}>
-        <SelectTrigger className="w-[10.5rem]">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">{t.admin.reservations.anyPayment}</SelectItem>
-          {Object.entries(t.admin.payment).map(([value, label]) => (
-            <SelectItem key={value} value={value}>
-              {label}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-
-      <Select value={params.get("channel") ?? "all"} onValueChange={(v) => set("channel", v)}>
-        <SelectTrigger className="w-[10.5rem]">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">{t.admin.reservations.allChannels}</SelectItem>
-          {Object.entries(t.admin.channelsShort).map(([value, label]) => (
-            <SelectItem key={value} value={value}>
-              {label}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+      {/* Los filtros de pago y canal se quitaron con las columnas
+          correspondientes: filtrar por un dato que el backend no guarda
+          devolvería siempre cero resultados. */}
 
       {active && (
         <Button

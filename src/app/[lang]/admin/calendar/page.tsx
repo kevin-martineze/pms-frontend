@@ -3,18 +3,12 @@ import { lang } from "next/root-params";
 
 import { StatCard } from "@/components/admin/stat-card";
 import { TapeChart, type TapeRow } from "@/components/admin/tape-chart";
+import { getBookings, getUnits, getUnitTypes } from "@/lib/api/server";
+import { getSession } from "@/lib/auth/server-session";
+import { toReservation } from "@/lib/bookings/mapper";
+import { inHouseOn, occupancyOn } from "@/lib/bookings/queries";
+import { addDays, toIsoDate } from "@/lib/format";
 import { getDictionary, resolveLocale } from "@/lib/i18n";
-import { unitName } from "@/lib/i18n/content";
-import { allRooms, unitById } from "@/lib/mock/property";
-import {
-  TODAY,
-  WINDOW_END,
-  WINDOW_START,
-  inHouseOn,
-  occupancyOn,
-  reservations,
-} from "@/lib/mock/reservations";
-import { addDays } from "@/lib/format";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = getDictionary(resolveLocale(await lang()));
@@ -25,26 +19,42 @@ export default async function CalendarPage() {
   const locale = resolveLocale(await lang());
   const t = getDictionary(locale);
 
-  const rows: TapeRow[] = allRooms.map(({ room, unitId }) => {
-    const unit = unitById.get(unitId);
-    return {
-      room,
-      unitName: unit ? unitName(unit, locale) : "",
-      /* La 205 está fuera de servicio por cambio de aire acondicionado. Es un
-         hecho independiente del calendario, no algo derivado de las reservas. */
-      blocked: room === "205",
-      reservations: reservations.filter(
-        (r) => r.room === room && r.status !== "cancelled" && r.range.checkOut > WINDOW_START,
-      ),
-    };
-  });
+  const session = await getSession();
+  if (!session) return null; // El layout ya mostró el login; esto es sólo para el tipo.
 
-  const next7 = Array.from({ length: 7 }, (_, i) => occupancyOn(addDays(TODAY, i)));
+  const today = toIsoDate(new Date());
+  const windowStart = addDays(today, -21);
+  const windowEnd = addDays(today, 49);
+
+  const [units, unitTypes, bookings] = await Promise.all([
+    getUnits(session),
+    getUnitTypes(session),
+    getBookings(session, { from: windowStart, to: windowEnd }),
+  ]);
+
+  const typeName = new Map(unitTypes.map((type) => [type.id, type.name]));
+  const reservations = bookings.map(toReservation);
+
+  const rows: TapeRow[] = units.map((unit) => ({
+    room: unit.label,
+    unitName: typeName.get(unit.unitTypeId) ?? "",
+    /* Fuera de servicio es un hecho de la unidad, no algo derivado del
+       calendario: una habitación en mantenimiento no se vende aunque esté
+       libre. */
+    blocked: !unit.active,
+    reservations: reservations.filter(
+      (r) => r.room === unit.label && r.status !== "cancelled",
+    ),
+  }));
+
+  const next7 = Array.from({ length: 7 }, (_, i) =>
+    occupancyOn(reservations, addDays(today, i), units.length),
+  );
   const avgNext7 = next7.reduce((a, b) => a + b, 0) / next7.length;
 
   const openNights = Array.from({ length: 14 }, (_, i) => {
-    const date = addDays(TODAY, i);
-    return allRooms.length - inHouseOn(date).length;
+    const date = addDays(today, i);
+    return units.length - inHouseOn(reservations, date).length;
   }).reduce((a, b) => a + b, 0);
 
   return (
@@ -64,18 +74,18 @@ export default async function CalendarPage() {
         <StatCard
           label={t.admin.calendar.openNights}
           value={String(openNights)}
-          hint={t.admin.calendar.openNightsHint(allRooms.length * 14)}
-          tone={openNights > allRooms.length * 6 ? "warning" : "neutral"}
+          hint={t.admin.calendar.openNightsHint(units.length * 14)}
+          tone={openNights > units.length * 6 ? "warning" : "neutral"}
         />
         <StatCard
           label={t.admin.calendar.keys}
-          value={String(allRooms.length)}
+          value={String(units.length)}
           hint={t.admin.calendar.keysHint}
         />
       </div>
 
       <div className="mt-6">
-        <TapeChart rows={rows} windowStart={WINDOW_START} windowEnd={WINDOW_END} today={TODAY} />
+        <TapeChart rows={rows} windowStart={windowStart} windowEnd={windowEnd} today={today} />
       </div>
 
       <p className="mt-4 text-xs text-muted-foreground">{t.admin.calendar.hint}</p>

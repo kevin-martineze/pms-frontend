@@ -4,21 +4,17 @@ import { Info } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { nightlyRate } from "@/lib/availability";
+import { getRateCalendar, getRatePlans, getUnitTypes } from "@/lib/api/server";
+import { getSession } from "@/lib/auth/server-session";
 import {
   addDays,
   formatDate,
   formatMoney,
   formatWeekdayNarrow,
-  isWeekend,
   parseIsoDate,
+  toIsoDate,
 } from "@/lib/format";
 import { getDictionary, intlTag, resolveLocale } from "@/lib/i18n";
-import { unitName } from "@/lib/i18n/content";
-import { units } from "@/lib/mock/property";
-import { ratePlans, seasonFor, seasons } from "@/lib/mock/operations";
-import { TODAY } from "@/lib/mock/reservations";
-import type { Dictionary } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -28,22 +24,45 @@ export async function generateMetadata(): Promise<Metadata> {
 
 const DAYS = 28;
 
-type PlanId = keyof Dictionary["admin"]["rates"]["plans"];
-type SeasonId = keyof Dictionary["admin"]["rates"]["seasons"];
-
 export default async function RatesPage() {
   const locale = resolveLocale(await lang());
   const t = getDictionary(locale);
   const tag = intlTag(locale);
 
-  const dates = Array.from({ length: DAYS }, (_, i) => addDays(TODAY, i));
+  const session = await getSession();
+  if (!session) return null;
+
+  const today = toIsoDate(new Date());
+  const lastDay = addDays(today, DAYS - 1);
+  const currency = session.property.currency;
+
+  const [calendar, unitTypes] = await Promise.all([
+    getRateCalendar(session, { from: today, to: lastDay }),
+    getUnitTypes(session),
+  ]);
+
+  /* Los planes se piden por tipo porque así los expone la API — cada plan
+     pertenece a un tipo de unidad, no a la propiedad. */
+  const plansByType = await Promise.all(
+    unitTypes.map(async (type) => ({
+      type,
+      plans: await getRatePlans(session, type.id),
+    })),
+  );
+  const allPlans = plansByType.flatMap(({ type, plans }) =>
+    plans.map((plan) => ({ ...plan, unitTypeName: type.name })),
+  );
+
+  const dates = calendar[0]?.nights.map((night) => night.date) ?? [];
 
   /* La escala se calcula sobre todas las celdas visibles, no por fila: la
      intensidad tiene que significar lo mismo en la suite y en la clásica, o el
      mapa deja de compararse consigo mismo. */
-  const allRates = units.flatMap((unit) => dates.map((date) => nightlyRate(unit, date)));
-  const min = Math.min(...allRates);
-  const max = Math.max(...allRates);
+  const allPrices = calendar.flatMap((row) => row.nights.map((n) => n.priceMinor));
+  const min = allPrices.length ? Math.min(...allPrices) : 0;
+  const max = allPrices.length ? Math.max(...allPrices) : 0;
+
+  const money = (amountMinor: number) => formatMoney({ amountMinor, currency }, tag);
 
   return (
     <div className="mx-auto max-w-[92rem] px-4 py-6 md:px-6 md:py-8">
@@ -53,44 +72,17 @@ export default async function RatesPage() {
         <p className="mt-2 max-w-2xl text-sm text-muted-foreground">{t.admin.rates.lead}</p>
       </header>
 
-      {/* --- Temporadas ----------------------------------------------------- */}
-      <section className="mt-6 grid gap-3 md:grid-cols-3">
-        {seasons.map((season) => (
-          <Card key={season.id}>
-            <CardHeader className="pb-2">
-              <CardTitle className="flex items-center gap-2 text-sm font-medium">
-                <span
-                  className="size-2.5 shrink-0 rounded-full"
-                  style={{ background: season.color }}
-                  aria-hidden
-                />
-                {t.admin.rates.seasons[season.id as SeasonId]}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="tnum text-2xl font-medium">
-                {season.adjustmentPct > 0 ? "+" : ""}
-                {season.adjustmentPct}%
-              </p>
-              <p className="mt-1 text-xs text-muted-foreground">
-                {formatDate(season.from, tag)} → {formatDate(season.to, tag)}
-              </p>
-            </CardContent>
-          </Card>
-        ))}
-      </section>
-
       {/* --- Mapa de tarifas ------------------------------------------------ */}
       <section className="mt-6 overflow-hidden rounded-xl border border-border bg-card">
         <header className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-4 py-3">
           <h2 className="text-sm font-medium">{t.admin.rates.nextFourWeeks}</h2>
           <p className="flex items-center gap-2 text-xs text-muted-foreground">
-            <span>{formatMoney({ amountMinor: Math.round(min * 100), currency: "USD" }, tag)}</span>
+            <span>{money(min)}</span>
             <span
               className="h-2 w-24 rounded-full bg-[linear-gradient(to_right,var(--secondary),var(--palm))]"
               aria-hidden
             />
-            <span>{formatMoney({ amountMinor: Math.round(max * 100), currency: "USD" }, tag)}</span>
+            <span>{money(max)}</span>
           </p>
         </header>
 
@@ -106,63 +98,70 @@ export default async function RatesPage() {
                 >
                   {t.admin.rates.unit}
                 </th>
-                {dates.map((date) => (
-                  <th
-                    key={date}
-                    scope="col"
-                    className={cn(
-                      "border-b border-border px-1 py-2 text-center font-normal",
-                      isWeekend(date) && "bg-secondary/50",
-                      date === TODAY && "bg-butter/25",
-                    )}
-                    style={{ minWidth: 48 }}
-                  >
-                    <span className="block text-[0.6rem] uppercase text-muted-foreground">
-                      {formatWeekdayNarrow(date, tag)}
-                    </span>
-                    <span className="tnum">{parseIsoDate(date).getDate()}</span>
-                  </th>
-                ))}
+                {dates.map((date) => {
+                  const weekend = calendar[0]?.nights.find((n) => n.date === date)?.weekend;
+                  return (
+                    <th
+                      key={date}
+                      scope="col"
+                      className={cn(
+                        "border-b border-border px-1 py-2 text-center font-normal",
+                        weekend && "bg-secondary/50",
+                        date === today && "bg-butter/25",
+                      )}
+                      style={{ minWidth: 48 }}
+                    >
+                      <span className="block text-[0.6rem] uppercase text-muted-foreground">
+                        {formatWeekdayNarrow(date, tag)}
+                      </span>
+                      <span className="tnum">{parseIsoDate(date).getDate()}</span>
+                    </th>
+                  );
+                })}
               </tr>
             </thead>
             <tbody>
-              {units.map((unit) => (
-                <tr key={unit.id}>
+              {calendar.map((row) => (
+                <tr key={row.unitTypeId}>
                   <th
                     scope="row"
                     className="sticky left-0 z-10 border-b border-r border-border bg-card px-3 py-2 text-left font-normal"
                   >
-                    <span className="block font-medium">{unitName(unit, locale)}</span>
+                    <span className="block font-medium">{row.unitTypeName}</span>
                     <span className="block text-[0.68rem] text-muted-foreground">
-                      {t.admin.rates.baseRate(
-                        formatMoney(unit.basePrice, tag),
-                        unit.inventoryCount,
-                      )}
+                      {t.admin.rates.base} {money(row.basePriceMinor)}
                     </span>
                   </th>
-                  {dates.map((date) => {
-                    const rate = nightlyRate(unit, date);
+                  {row.nights.map((night) => {
                     /* Rampa de un solo tono, claro a oscuro. Un arcoíris aquí
                        haría que "caro" y "barato" dejen de tener orden. */
-                    const ratio = max === min ? 0 : (rate - min) / (max - min);
-                    const season = seasonFor(date);
-                    const seasonName = season
-                      ? t.admin.rates.seasons[season.id as SeasonId]
-                      : t.admin.rates.standard;
+                    const ratio = max === min ? 0 : (night.priceMinor - min) / (max - min);
                     return (
                       <td
-                        key={date}
+                        key={night.date}
                         className={cn(
                           "tnum border-b border-border/60 px-1 py-2 text-center",
-                          date === TODAY && "ring-1 ring-inset ring-butter",
+                          night.date === today && "ring-1 ring-inset ring-butter",
+                          /* Cerrado se distingue por trama además de por color:
+                             el color solo no puede ser el único portador. */
+                          night.closed &&
+                            "bg-[repeating-linear-gradient(45deg,transparent,transparent_3px,var(--muted-foreground)_3px,var(--muted-foreground)_5px)] text-muted-foreground",
                         )}
-                        style={{
-                          background: `color-mix(in oklab, var(--palm) ${Math.round(ratio * 42)}%, var(--card))`,
-                          color: ratio > 0.7 ? "white" : undefined,
-                        }}
-                        title={`${unitName(unit, locale)} · ${formatDate(date, tag)} · ${seasonName}`}
+                        style={
+                          night.closed
+                            ? undefined
+                            : {
+                                background: `color-mix(in oklab, var(--palm) ${Math.round(ratio * 42)}%, var(--card))`,
+                                color: ratio > 0.7 ? "white" : undefined,
+                              }
+                        }
+                        title={`${row.unitTypeName} · ${formatDate(night.date, tag)} · ${
+                          night.closed
+                            ? t.admin.rates.closedPlan
+                            : (night.planName ?? t.admin.rates.standard)
+                        }`}
                       >
-                        {Math.round(rate)}
+                        {night.closed ? "—" : Math.round(night.priceMinor / 100)}
                       </td>
                     );
                   })}
@@ -178,45 +177,56 @@ export default async function RatesPage() {
         </p>
       </section>
 
-      {/* --- Planes tarifarios ---------------------------------------------- */}
+      {/* --- Planes ---------------------------------------------------------- */}
       <section className="mt-6">
         <h2 className="text-sm font-medium">{t.admin.rates.plansTitle}</h2>
-        <p className="mt-1 text-xs text-muted-foreground">{t.admin.rates.plansLead}</p>
+        <p className="mt-1 max-w-3xl text-xs text-muted-foreground">{t.admin.rates.plansLead}</p>
 
-        <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          {ratePlans.map((plan) => {
-            const copy = t.admin.rates.plans[plan.id as PlanId];
-            return (
+        {allPlans.length === 0 ? (
+          <p className="mt-4 rounded-xl border border-dashed border-border px-4 py-8 text-center text-sm text-muted-foreground">
+            {t.admin.rates.noPlans}
+          </p>
+        ) : (
+          <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            {allPlans.map((plan) => (
               <Card key={plan.id}>
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium">{copy.name}</CardTitle>
+                  <CardTitle className="text-sm font-medium">{plan.name}</CardTitle>
+                  <p className="text-xs text-muted-foreground">{plan.unitTypeName}</p>
                 </CardHeader>
                 <CardContent>
-                  <p className="tnum text-2xl font-medium">
-                    {plan.multiplier === 1
-                      ? t.admin.rates.planBase
-                      : `${plan.multiplier > 1 ? "+" : "−"}${Math.abs(
-                          Math.round((1 - plan.multiplier) * 100),
-                        )}%`}
+                  {plan.closed ? (
+                    <p className="text-lg font-medium text-status-departing">
+                      {t.admin.rates.closedPlan}
+                    </p>
+                  ) : (
+                    <>
+                      <p className="tnum text-2xl font-medium">{money(plan.priceMinor)}</p>
+                      {plan.weekendPriceMinor !== null && (
+                        <p className="tnum mt-0.5 text-xs text-muted-foreground">
+                          {t.admin.rates.weekendRate(money(plan.weekendPriceMinor))}
+                        </p>
+                      )}
+                    </>
+                  )}
+
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    {t.admin.rates.planRange(
+                      formatDate(plan.startDate.slice(0, 10), tag),
+                      formatDate(plan.endDate.slice(0, 10), tag),
+                    )}
                   </p>
-                  <div className="mt-3 flex flex-wrap gap-1.5">
-                    <Badge variant="secondary" className="text-[0.68rem]">
+
+                  {plan.minNights !== null && (
+                    <Badge variant="secondary" className="mt-3 text-[0.68rem]">
                       {t.admin.rates.minNights(plan.minNights)}
                     </Badge>
-                    {plan.id === "rp-direct" && (
-                      <Badge className="bg-butter text-[0.68rem] text-accent-foreground hover:bg-butter">
-                        {t.admin.rates.directOnly}
-                      </Badge>
-                    )}
-                  </div>
-                  <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
-                    {copy.cancellation}
-                  </p>
+                  )}
                 </CardContent>
               </Card>
-            );
-          })}
-        </div>
+            ))}
+          </div>
+        )}
       </section>
     </div>
   );

@@ -1,7 +1,6 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
 import { lang } from "next/root-params";
-import { TriangleAlert } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -13,22 +12,22 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { CHANNEL_COMMISSION, PAYMENT_CLASS, STATUS_CLASS } from "@/components/admin/labels";
+import { STATUS_CLASS } from "@/components/admin/labels";
+import { NewBookingDialog } from "@/components/admin/new-booking-dialog";
 import { ReservationFilters } from "@/components/admin/reservation-filters";
 import { StatCard } from "@/components/admin/stat-card";
-import { formatDateShort, formatMoney } from "@/lib/format";
+import { getBookings, getUnitTypes } from "@/lib/api/server";
+import { getSession } from "@/lib/auth/server-session";
+import { toReservation } from "@/lib/bookings/mapper";
+import { formatDateShort, formatMoney, toIsoDate } from "@/lib/format";
 import { getDictionary, intlTag, resolveLocale } from "@/lib/i18n";
-import { unitName } from "@/lib/i18n/content";
-import { unitById } from "@/lib/mock/property";
-import { TODAY, reservations } from "@/lib/mock/reservations";
-import { cn } from "@/lib/utils";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = getDictionary(resolveLocale(await lang()));
   return { title: t.admin.nav.reservations };
 }
 
-type Search = { q?: string; status?: string; payment?: string; channel?: string };
+type Search = { q?: string; status?: string };
 
 export default async function ReservationsPage({
   searchParams,
@@ -39,15 +38,23 @@ export default async function ReservationsPage({
   const locale = resolveLocale(await lang());
   const t = getDictionary(locale);
   const tag = intlTag(locale);
-  const nf = new Intl.NumberFormat(tag);
 
+  const session = await getSession();
+  if (!session) return null;
+
+  const [bookings, unitTypes] = await Promise.all([
+    getBookings(session),
+    getUnitTypes(session),
+  ]);
+
+  const typeName = new Map(unitTypes.map((type) => [type.id, type.name]));
+  const today = toIsoDate(new Date());
   const query = (params.q ?? "").trim().toLowerCase();
 
-  const filtered = reservations
+  const filtered = bookings
+    .map(toReservation)
     .filter((r) => {
       if (params.status && r.status !== params.status) return false;
-      if (params.payment && r.payment !== params.payment) return false;
-      if (params.channel && r.channel !== params.channel) return false;
       if (query) {
         const haystack =
           `${r.guest.name} ${r.reference} ${r.room ?? ""} ${r.guest.email}`.toLowerCase();
@@ -59,18 +66,32 @@ export default async function ReservationsPage({
        de creación es un log; ordenada por llegada es una agenda. */
     .sort((a, b) => a.range.checkIn.localeCompare(b.range.checkIn));
 
-  const upcoming = filtered.filter((r) => r.range.checkIn >= TODAY).length;
-  const owed =
-    filtered.reduce((acc, r) => acc + (r.status === "cancelled" ? 0 : r.balance.amountMinor), 0) /
-    100;
-  const commission =
-    filtered.reduce((acc, r) => acc + r.total.amountMinor * CHANNEL_COMMISSION[r.channel], 0) / 100;
+  /* "Por llegar" cuenta estadías que de verdad van a llegar: una cancelada o un
+     no-show tienen fecha futura pero nadie aparece por la puerta, y contarlas
+     infla la previsión de ocupación de la semana. */
+  const upcoming = filtered.filter(
+    (r) => r.range.checkIn >= today && r.status !== "cancelled" && r.status !== "no-show",
+  ).length;
+  const inHouse = filtered.filter((r) => r.status === "in-house").length;
 
+  /* Las tarjetas de "adeudado" y "comisión" y las columnas de pago y canal no
+     están: dependen del módulo de pagos y del desglose por OTA, que todavía no
+     existen en el backend. Volverán con datos de verdad detrás. */
   return (
     <div className="mx-auto max-w-[92rem] px-4 py-6 md:px-6 md:py-8">
-      <header>
-        <p className="eyebrow text-muted-foreground">{t.admin.reservations.eyebrow}</p>
-        <h1 className="display-sm mt-1.5 text-2xl md:text-3xl">{t.admin.reservations.title}</h1>
+      <header className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <p className="eyebrow text-muted-foreground">{t.admin.reservations.eyebrow}</p>
+          <h1 className="display-sm mt-1.5 text-2xl md:text-3xl">{t.admin.reservations.title}</h1>
+        </div>
+        <NewBookingDialog
+          unitTypes={unitTypes.map((type) => ({
+            id: type.id,
+            name: type.name,
+            maxGuests: type.maxGuests,
+            basePriceMinor: type.basePriceMinor,
+          }))}
+        />
       </header>
 
       <div className="mt-6 grid gap-3 sm:grid-cols-3">
@@ -80,16 +101,14 @@ export default async function ReservationsPage({
           hint={t.admin.reservations.upcomingHint}
         />
         <StatCard
-          label={t.admin.reservations.owed}
-          value={`$${nf.format(Math.round(owed))}`}
-          hint={t.admin.reservations.owedHint}
-          tone={owed > 0 ? "warning" : "neutral"}
+          label={t.admin.reservations.inHouse}
+          value={String(inHouse)}
+          hint={t.admin.reservations.inHouseHint}
         />
         <StatCard
-          label={t.admin.reservations.commission}
-          value={`$${nf.format(Math.round(commission))}`}
-          hint={t.admin.reservations.commissionHint}
-          tone="warning"
+          label={t.admin.reservations.total}
+          value={String(filtered.length)}
+          hint={t.admin.reservations.totalHint}
         />
       </div>
 
@@ -109,76 +128,47 @@ export default async function ReservationsPage({
                 <TableHead className="min-w-[11rem]">{t.admin.reservations.colUnit}</TableHead>
                 <TableHead>{t.admin.reservations.colDates}</TableHead>
                 <TableHead className="text-right">{t.admin.reservations.colNights}</TableHead>
+                <TableHead className="text-right">{t.admin.reservations.colGuests}</TableHead>
                 <TableHead>{t.admin.reservations.colStatus}</TableHead>
-                <TableHead>{t.admin.reservations.colPayment}</TableHead>
-                <TableHead>{t.admin.reservations.colChannel}</TableHead>
                 <TableHead className="text-right">{t.admin.reservations.colTotal}</TableHead>
-                <TableHead className="text-right">{t.admin.reservations.colBalance}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filtered.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={10} className="py-14 text-center text-muted-foreground">
+                  <TableCell colSpan={8} className="py-14 text-center text-muted-foreground">
                     {t.admin.reservations.empty}
                   </TableCell>
                 </TableRow>
               ) : (
-                filtered.slice(0, 80).map((reservation) => {
-                  const unit = unitById.get(reservation.unitId);
-                  const owes = reservation.balance.amountMinor > 0;
-                  return (
-                    <TableRow key={reservation.id}>
-                      <TableCell>
-                        <span className="block font-medium">{reservation.guest.name}</span>
-                        <span className="block font-mono text-xs text-muted-foreground">
-                          {reservation.reference}
-                        </span>
-                      </TableCell>
-                      <TableCell className="tnum font-medium">{reservation.room}</TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {unit ? unitName(unit, locale) : ""}
-                      </TableCell>
-                      <TableCell className="tnum whitespace-nowrap text-muted-foreground">
-                        {formatDateShort(reservation.range.checkIn, tag)} →{" "}
-                        {formatDateShort(reservation.range.checkOut, tag)}
-                      </TableCell>
-                      <TableCell className="tnum text-right">{reservation.nights}</TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className={STATUS_CLASS[reservation.status]}>
-                          {t.admin.status[reservation.status]}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className={PAYMENT_CLASS[reservation.payment]}>
-                          {t.admin.payment[reservation.payment]}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {t.admin.channelsShort[reservation.channel]}
-                        {CHANNEL_COMMISSION[reservation.channel] > 0 && (
-                          <span className="tnum block text-xs text-status-departing">
-                            −{Math.round(CHANNEL_COMMISSION[reservation.channel] * 100)}%
-                          </span>
-                        )}
-                      </TableCell>
-                      <TableCell className="tnum text-right">
-                        {formatMoney(reservation.total, tag)}
-                      </TableCell>
-                      <TableCell
-                        className={cn(
-                          "tnum text-right",
-                          owes && "font-medium text-status-departing",
-                        )}
-                      >
-                        <span className="inline-flex items-center gap-1.5">
-                          {owes && <TriangleAlert className="size-3.5" aria-hidden />}
-                          {formatMoney(reservation.balance, tag)}
-                        </span>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })
+                filtered.slice(0, 80).map((reservation) => (
+                  <TableRow key={reservation.id}>
+                    <TableCell>
+                      <span className="block font-medium">{reservation.guest.name}</span>
+                      <span className="block font-mono text-xs text-muted-foreground">
+                        {reservation.reference}
+                      </span>
+                    </TableCell>
+                    <TableCell className="tnum font-medium">{reservation.room}</TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {typeName.get(reservation.unitId) ?? ""}
+                    </TableCell>
+                    <TableCell className="tnum whitespace-nowrap text-muted-foreground">
+                      {formatDateShort(reservation.range.checkIn, tag)} →{" "}
+                      {formatDateShort(reservation.range.checkOut, tag)}
+                    </TableCell>
+                    <TableCell className="tnum text-right">{reservation.nights}</TableCell>
+                    <TableCell className="tnum text-right">{reservation.guests}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className={STATUS_CLASS[reservation.status]}>
+                        {t.admin.status[reservation.status]}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="tnum text-right">
+                      {formatMoney(reservation.total, tag)}
+                    </TableCell>
+                  </TableRow>
+                ))
               )}
             </TableBody>
           </Table>

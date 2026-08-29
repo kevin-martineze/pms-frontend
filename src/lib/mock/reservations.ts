@@ -190,6 +190,7 @@ function build(): Reservation[] {
         guest: makeGuest(rnd, counter),
         range,
         nights,
+        guests: adults + children,
         adults,
         children,
         status,
@@ -275,7 +276,7 @@ export function revenueBetween(from: IsoDate, to: IsoDate): number {
 export function channelMix(from: IsoDate, to: IsoDate): { channel: Channel; nights: number; revenue: number }[] {
   const map = new Map<Channel, { nights: number; revenue: number }>();
   for (const r of reservations) {
-    if (r.status === "cancelled") continue;
+    if (r.status === "cancelled" || !r.channel) continue;
     for (let d = r.range.checkIn; d < r.range.checkOut; d = addDays(d, 1)) {
       if (d < from || d >= to) continue;
       const entry = map.get(r.channel) ?? { nights: 0, revenue: 0 };
