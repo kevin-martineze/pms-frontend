@@ -86,6 +86,8 @@ export function getPublicAvailability(range: {
 }
 
 export type PublicBookingInput = {
+  /** Idioma en que el huésped está reservando. Define en qué idioma se le escribe. */
+  locale?: "es" | "en";
   unitTypeId: string;
   checkIn: string;
   checkOut: string;

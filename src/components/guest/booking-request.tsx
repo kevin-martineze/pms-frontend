@@ -73,6 +73,11 @@ export function BookingRequest({
 
     startTransition(async () => {
       const result = await requestBooking({
+        /* El idioma viaja con la solicitud y queda guardado en la ficha del
+           huésped. Es el único momento en que el sistema sabe en qué idioma
+           tratarlo: la confirmación la manda el personal días después, cuando
+           esa información ya no está en ningún lado. */
+        locale,
         unitTypeId: chosen.unitTypeId,
         checkIn: availability.checkIn,
         checkOut: availability.checkOut,
