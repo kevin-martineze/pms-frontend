@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 
 import { AdminLoginScreen } from "@/components/admin/admin-login-screen";
 import { AdminShell } from "@/components/admin/admin-shell";
+import { getPendingBookings } from "@/lib/api/server";
 import { getSession } from "@/lib/auth/server-session";
 
 export const metadata: Metadata = {
@@ -24,6 +25,16 @@ export default async function AdminLayout({ children }: LayoutProps<"/[lang]/adm
 
   if (!session) return <AdminLoginScreen />;
 
+  /* El contador del menú se pide acá, en el layout, para que esté en todas las
+     pantallas: una solicitud tiene 48 horas de retención, y enterarse no puede
+     depender de que alguien entre a "Hoy".
+
+     Si falla, el panel sigue funcionando sin contador — un badge no vale una
+     pantalla de error. */
+  const pendingRequests = await getPendingBookings(session)
+    .then((list) => list.length)
+    .catch(() => 0);
+
   /* Se arma el resumen a mano en vez de pasar `session`: el objeto completo
      lleva el access token, y todo prop que cruza a un Client Component termina
      serializado en el HTML. Ver `SessionSummary`.
@@ -43,6 +54,7 @@ export default async function AdminLayout({ children }: LayoutProps<"/[lang]/adm
       }}
       properties={session.properties.map((p) => ({ id: p.id, name: p.name }))}
       currentPropertyId={session.property.id}
+      pendingRequests={pendingRequests}
     >
       {children}
     </AdminShell>

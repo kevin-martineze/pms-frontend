@@ -5,10 +5,12 @@ import { revalidatePath } from "next/cache";
 import { ApiError } from "@/lib/api/client";
 import {
   getAvailability,
+  patchBooking,
   postBooking,
   postTransition,
   type BookingTransition,
   type NewBookingInput,
+  type UpdateBookingInput,
 } from "@/lib/api/server";
 import { getSession } from "@/lib/auth/server-session";
 
@@ -90,6 +92,29 @@ export async function createBooking(input: NewBookingInput): Promise<ActionResul
 
   try {
     await postBooking(session, input);
+    revalidatePanel();
+    return { ok: true };
+  } catch (error) {
+    return toResult(error);
+  }
+}
+
+/**
+ * Cambia fechas, huéspedes, habitación o notas de una reserva ya tomada.
+ *
+ * El precio no viaja: si cambian las fechas, el servidor recotiza. Mandarlo
+ * desde el formulario dejaría que recepción tecleara cualquier número, y el
+ * total dejaría de tener relación con las tarifas publicadas.
+ */
+export async function editBooking(
+  bookingId: string,
+  input: UpdateBookingInput,
+): Promise<ActionResult> {
+  const session = await getSession();
+  if (!session) return { ok: false, error: "La sesión venció. Volvé a entrar." };
+
+  try {
+    await patchBooking(session, bookingId, input);
     revalidatePanel();
     return { ok: true };
   } catch (error) {

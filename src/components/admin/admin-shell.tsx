@@ -135,11 +135,14 @@ export function AdminShell({
   session,
   properties,
   currentPropertyId,
+  pendingRequests,
 }: {
   children: React.ReactNode;
   session: SessionSummary;
   properties: { id: string; name: string }[];
   currentPropertyId: string;
+  /** Solicitudes del sitio sin responder. Cero = no se muestra nada. */
+  pendingRequests: number;
 }) {
   const { t } = useI18n();
   const router = useRouter();
@@ -161,6 +164,7 @@ export function AdminShell({
         <SidebarNav
           allowed={allowed}
           className="hidden w-60 shrink-0 overflow-y-auto lg:flex"
+          pendingRequests={pendingRequests}
         />
 
         <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
@@ -176,7 +180,7 @@ export function AdminShell({
                 <SheetHeader className="sr-only">
                   <SheetTitle>{t.admin.nav.sections}</SheetTitle>
                 </SheetHeader>
-                <SidebarNav allowed={allowed} className="flex w-full" />
+                <SidebarNav allowed={allowed} className="flex w-full" pendingRequests={pendingRequests} />
               </SheetContent>
             </Sheet>
 
@@ -233,7 +237,15 @@ export function AdminShell({
   );
 }
 
-function SidebarNav({ allowed, className }: { allowed: Set<string>; className?: string }) {
+function SidebarNav({
+  allowed,
+  className,
+  pendingRequests,
+}: {
+  allowed: Set<string>;
+  className?: string;
+  pendingRequests: number;
+}) {
   const pathname = usePathname();
   const { t, locale } = useI18n();
 
@@ -289,6 +301,17 @@ function SidebarNav({ allowed, className }: { allowed: Set<string>; className?: 
           >
             <Icon className="size-4" aria-hidden />
             {label}
+            {/* El contador de solicitudes sin responder va en "Hoy": es la
+                pantalla donde se atienden, y una solicitud tiene reloj —48 horas
+                de retención— así que enterarse depende de entrar a mirar. */}
+            {item.key === "today" && pendingRequests > 0 && (
+              <span
+                className="tnum ml-auto rounded-full bg-butter px-1.5 py-0.5 text-[0.68rem] font-medium text-[oklch(0.24_0.04_80)]"
+                aria-label={t.admin.nav.pendingRequests(pendingRequests)}
+              >
+                {pendingRequests}
+              </span>
+            )}
           </LocaleLink>
         );
       })}

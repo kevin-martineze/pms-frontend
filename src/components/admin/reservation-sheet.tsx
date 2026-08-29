@@ -2,10 +2,14 @@
 
 import * as React from "react";
 import { toast } from "sonner";
+import { Pencil } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { Textarea } from "@/components/ui/textarea";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { PAYMENT_CLASS, STATUS_CLASS } from "@/components/admin/labels";
 import { useRole } from "@/components/admin/admin-shell";
@@ -14,6 +18,7 @@ import {
   checkInBooking,
   checkOutBooking,
   confirmBooking,
+  editBooking,
 } from "@/lib/bookings/actions";
 import { formatDate, formatMoney } from "@/lib/format";
 import { useI18n } from "@/lib/i18n/provider";
@@ -38,6 +43,24 @@ export function ReservationSheet({
 }) {
   const { t, intlTag } = useI18n();
   const s = t.admin.calendar.sheet;
+  const role = useRole();
+  const [editing, setEditing] = React.useState(false);
+
+  /* Se sale del modo edición al cambiar de reserva. Sin esto, cerrar la hoja
+     mientras se editaba y abrir otra la mostraría ya en el formulario. */
+  const openId = reservation?.id ?? null;
+  const [lastId, setLastId] = React.useState(openId);
+  if (openId !== lastId) {
+    setLastId(openId);
+    setEditing(false);
+  }
+
+  /* Camarería no toca reservas, y una cerrada es un hecho histórico: el backend
+     rechaza el PATCH igual, esto evita ofrecer un botón que no funciona. */
+  const canEdit =
+    role !== "housekeeping" &&
+    reservation !== null &&
+    !["checked-out", "cancelled", "no-show"].includes(reservation.status);
 
   return (
     <Sheet open={reservation !== null} onOpenChange={(open) => !open && onClose()}>
@@ -69,22 +92,47 @@ export function ReservationSheet({
                 )}
               </div>
 
-              <dl className="space-y-3 text-sm">
-                <Item
-                  term={s.room}
-                  detail={s.nightsInRoom(reservation.room ?? "—", reservation.nights)}
+              {editing ? (
+                <EditForm
+                  reservation={reservation}
+                  onDone={() => setEditing(false)}
+                  onCancel={() => setEditing(false)}
                 />
-                <Item
-                  term={s.checkIn}
-                  detail={`${formatDate(reservation.range.checkIn, intlTag)} · 15:00`}
-                />
-                <Item
-                  term={s.checkOut}
-                  detail={`${formatDate(reservation.range.checkOut, intlTag)} · 11:00`}
-                />
-                <Item term={s.guests} detail={t.common.guests(reservation.guests)} />
-                <Item term={s.bookedOn} detail={formatDate(reservation.createdAt, intlTag)} />
-              </dl>
+              ) : (
+                <>
+                  <dl className="space-y-3 text-sm">
+                    <Item
+                      term={s.room}
+                      detail={s.nightsInRoom(reservation.room ?? "—", reservation.nights)}
+                    />
+                    <Item
+                      term={s.checkIn}
+                      detail={`${formatDate(reservation.range.checkIn, intlTag)} · 15:00`}
+                    />
+                    <Item
+                      term={s.checkOut}
+                      detail={`${formatDate(reservation.range.checkOut, intlTag)} · 11:00`}
+                    />
+                    <Item term={s.guests} detail={t.common.guests(reservation.guests)} />
+                    <Item
+                      term={s.bookedOn}
+                      detail={formatDate(reservation.createdAt, intlTag)}
+                    />
+                  </dl>
+
+                  {canEdit && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full gap-1.5"
+                      onClick={() => setEditing(true)}
+                    >
+                      <Pencil className="size-3.5" aria-hidden />
+                      {s.editCta}
+                    </Button>
+                  )}
+                </>
+              )}
 
               <Separator />
 
@@ -108,7 +156,7 @@ export function ReservationSheet({
               </div>
             </div>
 
-            <SheetActions reservation={reservation} onDone={onClose} />
+            {!editing && <SheetActions reservation={reservation} onDone={onClose} />}
           </>
         )}
       </SheetContent>
@@ -229,6 +277,121 @@ function Item({
       >
         {detail}
       </dd>
+    </div>
+  );
+}
+
+/**
+ * Modificar una reserva ya tomada.
+ *
+ * Es lo que evita el rodeo que hacía recepción hasta ahora: cancelar y volver a
+ * cargar, que pierde la referencia que el huésped ya tiene y borra el precio con
+ * el que se le vendió.
+ *
+ * **El total no se edita ni se muestra editable.** Si cambian las fechas, el
+ * servidor recotiza contra las tarifas; extender una noche a un viernes cuesta
+ * lo que cuesta ese viernes. Un campo de precio acá dejaría que el importe
+ * dejara de tener relación con lo publicado.
+ */
+function EditForm({
+  reservation,
+  onDone,
+  onCancel,
+}: {
+  reservation: Reservation;
+  onDone: () => void;
+  onCancel: () => void;
+}) {
+  const { t } = useI18n();
+  const s = t.admin.calendar.sheet;
+  const [pending, startTransition] = React.useTransition();
+  const [error, setError] = React.useState<string | null>(null);
+  const [form, setForm] = React.useState({
+    checkIn: reservation.range.checkIn,
+    checkOut: reservation.range.checkOut,
+    guests: String(reservation.guests),
+    notes: reservation.notes ?? "",
+  });
+
+  const valid = form.checkOut > form.checkIn && Number(form.guests) >= 1;
+
+  function save() {
+    setError(null);
+    startTransition(async () => {
+      const result = await editBooking(reservation.id, {
+        checkIn: form.checkIn,
+        checkOut: form.checkOut,
+        guests: Number(form.guests),
+        guestNotes: form.notes.trim(),
+      });
+      if (result.ok) {
+        toast.success(s.edited(reservation.guest.name));
+        onDone();
+      } else {
+        setError(result.error);
+      }
+    });
+  }
+
+  return (
+    <div className="grid gap-4">
+      <div className="grid grid-cols-2 gap-3">
+        <div className="grid gap-1.5">
+          <Label htmlFor="edit-in">{s.checkIn}</Label>
+          <Input
+            id="edit-in"
+            type="date"
+            value={form.checkIn}
+            onChange={(e) => setForm((f) => ({ ...f, checkIn: e.target.value }))}
+          />
+        </div>
+        <div className="grid gap-1.5">
+          <Label htmlFor="edit-out">{s.checkOut}</Label>
+          <Input
+            id="edit-out"
+            type="date"
+            value={form.checkOut}
+            onChange={(e) => setForm((f) => ({ ...f, checkOut: e.target.value }))}
+          />
+        </div>
+      </div>
+
+      <div className="grid gap-1.5">
+        <Label htmlFor="edit-guests">{s.guests}</Label>
+        <Input
+          id="edit-guests"
+          type="number"
+          min={1}
+          value={form.guests}
+          onChange={(e) => setForm((f) => ({ ...f, guests: e.target.value }))}
+        />
+      </div>
+
+      <div className="grid gap-1.5">
+        <Label htmlFor="edit-notes">{s.notes}</Label>
+        <Textarea
+          id="edit-notes"
+          rows={2}
+          value={form.notes}
+          onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
+        />
+      </div>
+
+      <p className="text-xs text-muted-foreground">{s.requoteNote}</p>
+
+      {!valid && form.checkOut <= form.checkIn && (
+        <p className="text-sm text-status-departing">{s.badRange}</p>
+      )}
+      {error && <p className="text-sm text-status-departing">{error}</p>}
+
+      <div className="flex gap-2">
+        <Button variant="ghost" className="flex-1" onClick={onCancel} disabled={pending}>
+          {s.editCancel}
+        </Button>
+        <Button className="flex-1" onClick={save} disabled={!valid || pending}>
+          {pending ? s.saving : s.saveChanges}
+        </Button>
+      </div>
     </div>
   );
 }
