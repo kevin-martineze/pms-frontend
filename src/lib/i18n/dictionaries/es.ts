@@ -206,6 +206,42 @@ export const es: Dictionary = {
     },
   },
 
+  bookRequest: {
+    metaTitle: "Solicitar reserva",
+    title: "Solicitá tu reserva",
+    lead: "Elegí las fechas y te decimos qué hay libre y cuánto cuesta. Todavía no cobramos en línea: el hotel confirma tu solicitud y coordina el pago con vos.",
+    whenTitle: "¿Cuándo venís?",
+    checkIn: "Entrada",
+    checkOut: "Salida",
+    guests: "Huéspedes",
+    search: "Ver disponibilidad",
+    optionsTitle: (from, to) => `Disponible del ${from} al ${to}`,
+    upTo: (n) => `Hasta ${n} ${n === 1 ? "huésped" : "huéspedes"}`,
+    nightsTotal: (n) => `${n} ${n === 1 ? "noche" : "noches"} en total`,
+    taxIncluded: (tax) => `incluye ${tax} de ITBMS`,
+    noRooms: "Sin disponibilidad en esas fechas.",
+    tooManyGuests: "No alcanza para esa cantidad de huéspedes.",
+    whoTitle: "Tus datos",
+    name: "Nombre completo",
+    email: "Correo",
+    phone: "Teléfono / WhatsApp (opcional)",
+    notes: "Algo que debamos saber (opcional)",
+    noPaymentNotice: (time) =>
+      `No se cobra nada ahora. El hotel revisa tu solicitud y te escribe para confirmar; el check-in es a partir de las ${time}.`,
+    submit: "Enviar solicitud",
+    sending: "Enviando…",
+    genericError: "No pudimos consultar la disponibilidad. Probá de nuevo.",
+    sentTitle: "Recibimos tu solicitud",
+    sentBody:
+      "Todavía no es una reserva confirmada. El hotel la revisa y te escribe para confirmarla y coordinar el pago.",
+    reference: "Referencia",
+    room: "Habitación",
+    dates: "Fechas",
+    total: "Total estimado",
+    holdNotice: (date) =>
+      `Apartamos la habitación hasta el ${date} mientras el hotel confirma. Guardá tu referencia.`,
+  },
+
   checkout: {
     metaTitle: "Confirmar reserva",
     backTo: (unit) => `Volver a ${unit}`,
@@ -380,7 +416,12 @@ export const es: Dictionary = {
     },
     checkInOut: (inTime, outTime) =>
       `Check-in ${inTime} · Check-out ${outTime} · Precios en dólares (USD)`,
-    disclaimer: "Maqueta de propuesta. Datos de demostración, no reservas reales.",
+    /* Decía "no reservas reales", y dejó de ser cierto el día que /book empezó
+       a crear reservas de verdad en el sistema. Un aviso que niega lo que la
+       página acaba de hacer es peor que no tener aviso. Lo que sigue siendo de
+       demostración es el contenido: fotos, textos y nombres de habitaciones. */
+    disclaimer:
+      "Fotos y textos de demostración. Las solicitudes de reserva sí entran al sistema del hotel.",
   },
 
   demo: {
@@ -589,11 +630,13 @@ export const es: Dictionary = {
         commission: "Comisión del canal",
         ownChannel: "$0 — canal propio",
         contact: "Contacto",
+        confirmCta: "Aceptar solicitud",
         cancelCta: "Cancelar reserva",
         checkOutCta: "Registrar salida",
         checkedIn: (name) => `Se registró la entrada de ${name}.`,
         checkedOut: (name) => `Se registró la salida de ${name}.`,
         cancelled: (name) => `Se canceló la reserva de ${name}.`,
+        confirmed: (name) => `Se aceptó la reserva de ${name}.`,
         checkInCta: "Registrar entrada",
         editCta: "Editar reserva",
         adultsChildren: (a, c) => (c > 0 ? `${a} adultos · ${c} niños` : `${a} adultos`),

@@ -206,6 +206,42 @@ export const en = {
     },
   },
 
+  bookRequest: {
+    metaTitle: "Request a booking",
+    title: "Request your stay",
+    lead: "Pick your dates and we'll show you what's free and what it costs. We don't charge online yet: the hotel confirms your request and arranges payment with you.",
+    whenTitle: "When are you coming?",
+    checkIn: "Check-in",
+    checkOut: "Check-out",
+    guests: "Guests",
+    search: "See availability",
+    optionsTitle: (from: string, to: string) => `Available ${from} → ${to}`,
+    upTo: (n: number) => `Up to ${n} ${n === 1 ? "guest" : "guests"}`,
+    nightsTotal: (n: number) => `${n} ${n === 1 ? "night" : "nights"} total`,
+    taxIncluded: (tax: string) => `includes ${tax} tax`,
+    noRooms: "No availability on those dates.",
+    tooManyGuests: "Not enough room for that many guests.",
+    whoTitle: "Your details",
+    name: "Full name",
+    email: "Email",
+    phone: "Phone / WhatsApp (optional)",
+    notes: "Anything we should know (optional)",
+    noPaymentNotice: (time: string) =>
+      `Nothing is charged now. The hotel reviews your request and writes back to confirm; check-in is from ${time}.`,
+    submit: "Send request",
+    sending: "Sending…",
+    genericError: "We couldn't check availability. Please try again.",
+    sentTitle: "We got your request",
+    sentBody:
+      "This is not a confirmed booking yet. The hotel reviews it and will write to confirm and arrange payment.",
+    reference: "Reference",
+    room: "Room",
+    dates: "Dates",
+    total: "Estimated total",
+    holdNotice: (date: string) =>
+      `We're holding the room until ${date} while the hotel confirms. Keep your reference.`,
+  },
+
   checkout: {
     metaTitle: "Confirm booking",
     backTo: (unit: string) => `Back to ${unit}`,
@@ -371,7 +407,8 @@ export const en = {
     },
     checkInOut: (inTime: string, outTime: string) =>
       `Check-in ${inTime} · Check-out ${outTime} · Prices in US dollars`,
-    disclaimer: "Proposal mockup. Demonstration data, not real bookings.",
+    disclaimer:
+      "Photos and copy are placeholders. Booking requests do reach the hotel's system.",
   },
 
   demo: {
@@ -578,11 +615,13 @@ export const en = {
         commission: "Channel commission",
         ownChannel: "$0 — own channel",
         contact: "Contact",
+        confirmCta: "Accept request",
         cancelCta: "Cancel booking",
         checkOutCta: "Check out",
         checkedIn: (name: string) => `${name} checked in.`,
         checkedOut: (name: string) => `${name} checked out.`,
         cancelled: (name: string) => `${name}'s booking was cancelled.`,
+        confirmed: (name: string) => `${name}'s booking was accepted.`,
         checkInCta: "Check in",
         editCta: "Edit booking",
         adultsChildren: (a: number, c: number) =>

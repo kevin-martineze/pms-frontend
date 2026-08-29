@@ -32,7 +32,6 @@ import { cn } from "@/lib/utils";
 
 type Props = {
   unitId: string;
-  unitSlug: string;
   unitName: string;
   maxGuests: number;
   basePriceLabel: string;
@@ -45,7 +44,6 @@ type Props = {
 
 export function BookingPanel({
   unitId,
-  unitSlug,
   unitName,
   maxGuests,
   basePriceLabel,
@@ -89,13 +87,16 @@ export function BookingPanel({
       setOpen(true);
       return;
     }
+    /* Lleva a `/book` con las fechas, no a `/book/${unitSlug}`: esta ficha
+       describe una habitación del contenido de demostración, que no existe en
+       el inventario real. La solicitud se hace sobre lo que la API sí vende, y
+       ahí el huésped elige entre los tipos reales. */
     const params = new URLSearchParams({
-      in: toIsoDate(range.from),
-      out: toIsoDate(range.to),
-      adults: String(adults),
+      checkIn: toIsoDate(range.from),
+      checkOut: toIsoDate(range.to),
+      guests: String(adults + children),
     });
-    if (children > 0) params.set("children", String(children));
-    router.push(withLocale(locale, `/book/${unitSlug}?${params.toString()}`));
+    router.push(withLocale(locale, `/book?${params.toString()}`));
   }
 
   return (

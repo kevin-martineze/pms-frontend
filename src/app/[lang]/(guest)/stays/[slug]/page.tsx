@@ -219,7 +219,6 @@ export default async function UnitPage({
 
         <BookingPanel
           unitId={unit.id}
-          unitSlug={unit.slug}
           unitName={unitName(unit, locale)}
           maxGuests={unit.capacity.guests}
           basePriceLabel={formatMoney(unit.basePrice, tag)}

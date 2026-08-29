@@ -163,8 +163,8 @@ export function postBooking(session: Session, input: NewBookingInput): Promise<A
   );
 }
 
-/** Las cuatro transiciones de estado comparten forma: sólo cambia el verbo de la URL. */
-export type BookingTransition = "check-in" | "check-out" | "cancel" | "no-show";
+/** Las transiciones de estado comparten forma: sólo cambia el verbo de la URL. */
+export type BookingTransition = "confirm" | "check-in" | "check-out" | "cancel" | "no-show";
 
 export function postTransition(
   session: Session,

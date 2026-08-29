@@ -10,7 +10,12 @@ import { Separator } from "@/components/ui/separator";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { PAYMENT_CLASS, STATUS_CLASS } from "@/components/admin/labels";
 import { useRole } from "@/components/admin/admin-shell";
-import { cancelBooking, checkInBooking, checkOutBooking } from "@/lib/bookings/actions";
+import {
+  cancelBooking,
+  checkInBooking,
+  checkOutBooking,
+  confirmBooking,
+} from "@/lib/bookings/actions";
 import {
   diffNights,
   formatDate,
@@ -381,10 +386,13 @@ function SheetActions({
 
   if (role === "housekeeping") return null;
 
+  /* Sólo se ofrecen las transiciones que la máquina de estados del backend
+     acepta. Un botón que siempre falla es peor que un botón ausente. */
+  const canConfirm = reservation.status === "pending";
   const canCheckIn = reservation.status === "confirmed";
   const canCheckOut = reservation.status === "in-house";
   const canCancel = reservation.status === "confirmed" || reservation.status === "pending";
-  if (!canCheckIn && !canCheckOut && !canCancel) return null;
+  if (!canConfirm && !canCheckIn && !canCheckOut && !canCancel) return null;
 
   function run(action: () => Promise<{ ok: true } | { ok: false; error: string }>, success: string) {
     startTransition(async () => {
@@ -400,6 +408,17 @@ function SheetActions({
 
   return (
     <div className="grid gap-2 border-t border-border p-4 sm:grid-cols-2">
+      {canConfirm && (
+        <Button
+          className="sm:col-span-2"
+          disabled={pending}
+          onClick={() =>
+            run(() => confirmBooking(reservation.id), s.confirmed(reservation.guest.name))
+          }
+        >
+          {s.confirmCta}
+        </Button>
+      )}
       {canCancel && (
         <Button
           variant="outline"

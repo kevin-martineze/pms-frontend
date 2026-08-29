@@ -56,6 +56,18 @@ async function transition(bookingId: string, verb: BookingTransition): Promise<A
   }
 }
 
+/**
+ * Acepta una solicitud que entró por el sitio del huésped.
+ *
+ * Es el paso que cierra el circuito: sin pagos, una reserva directa llega en
+ * `PENDING` con una retención de 48 horas, y alguien del hotel tiene que
+ * decidir si la toma. Sin esto la solicitud vencía sola y el huésped se
+ * quedaba esperando una respuesta que nadie podía dar.
+ */
+export async function confirmBooking(bookingId: string): Promise<ActionResult> {
+  return transition(bookingId, "confirm");
+}
+
 export async function checkInBooking(bookingId: string): Promise<ActionResult> {
   return transition(bookingId, "check-in");
 }
