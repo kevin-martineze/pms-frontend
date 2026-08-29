@@ -197,6 +197,9 @@ function build(): Reservation[] {
         payment,
         channel,
         total: money(Math.round(total)),
+        /* Sin el ITBMS, igual que lo que devuelve la API: es sobre esto que se
+           calculan ADR, RevPAR e ingreso. La limpieza sí es ingreso del hotel. */
+        net: money(Math.round(subtotal + cleaning)),
         balance: money(Math.round(balance)),
         createdAt: addDays(checkIn, -(3 + Math.floor(rnd() * 40))),
       });

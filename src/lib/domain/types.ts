@@ -212,7 +212,18 @@ export type Reservation = {
   status: ReservationStatus;
   payment?: PaymentStatus;
   channel?: Channel;
+  /** Lo que paga el huésped: alojamiento más ITBMS. */
   total: Money;
+  /**
+   * Ingreso del hotel: el total **sin** impuesto.
+   *
+   * Existe separado porque los indicadores se calculan sobre esto y no sobre el
+   * total. El ITBMS se cobra para la DGI y se entrega, así que meterlo en el
+   * ADR lo infla un 10% y lo vuelve incomparable con cualquier tarifa
+   * publicada. Es además lo que usa la pantalla de Reportes: sin este campo, el
+   * mismo hotel mostraba ADR de $88 en el panel de hoy y de $80 en reportes.
+   */
+  net: Money;
   balance?: Money;
   createdAt: IsoDate;
   notes?: string;

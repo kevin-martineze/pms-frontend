@@ -45,11 +45,17 @@ export function occupancyOn(
   return inHouseOn(reservations, date).length / totalRooms;
 }
 
-/** ADR — tarifa media diaria sobre las habitaciones efectivamente vendidas. */
+/**
+ * ADR — tarifa media diaria sobre las habitaciones efectivamente vendidas.
+ *
+ * Sobre el ingreso **neto**, igual que la pantalla de Reportes. Calculado sobre
+ * el total con impuesto daba $88 acá y $80 allá para el mismo hotel, que es la
+ * clase de discrepancia que hace desconfiar de las dos pantallas.
+ */
 export function adrOn(reservations: Reservation[], date: IsoDate): number {
   const stays = inHouseOn(reservations, date);
   if (stays.length === 0) return 0;
-  const sum = stays.reduce((acc, r) => acc + r.total.amountMinor / r.nights, 0);
+  const sum = stays.reduce((acc, r) => acc + r.net.amountMinor / r.nights, 0);
   return sum / stays.length / 100;
 }
 
@@ -72,7 +78,7 @@ export function revenueBetween(
   for (const r of reservations) {
     if (r.status === "cancelled" || r.status === "no-show") continue;
     for (let d = r.range.checkIn; d < r.range.checkOut; d = addDays(d, 1)) {
-      if (d >= from && d < to) total += r.total.amountMinor / r.nights / 100;
+      if (d >= from && d < to) total += r.net.amountMinor / r.nights / 100;
     }
   }
   return total;

@@ -44,6 +44,7 @@ export function toReservation(booking: ApiBooking): Reservation {
     guests: booking.guests,
     status: STATUS_MAP[booking.status],
     total: { amountMinor: booking.totalMinor, currency: booking.currency },
+    net: { amountMinor: booking.subtotalMinor, currency: booking.currency },
     createdAt: toCalendarDate(booking.createdAt),
     notes: booking.guestNotes ?? undefined,
     /* `payment`, `balance` y `channel` se omiten a propósito: no hay dato real

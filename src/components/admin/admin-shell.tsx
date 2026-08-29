@@ -291,10 +291,10 @@ function SidebarNav({ allowed, className }: { allowed: Set<string>; className?: 
         );
       })}
 
-      <div className="mt-auto rounded-lg bg-white/5 p-3 text-xs text-white/55">
-        <p className="font-medium text-white/80">{t.admin.nav.mockTitle}</p>
-        <p className="mt-1 leading-relaxed">{t.admin.nav.mockBody}</p>
-      </div>
+      {/* Acá vivía un aviso de "conectado en parte" que enumeraba qué pantallas
+          seguían con datos de demostración. Ya no queda ninguna, y un cartel que
+          dice que los datos son falsos cuando son reales es peor que no tener
+          cartel: enseña a desconfiar de lo que la pantalla muestra. */}
     </nav>
   );
 }
