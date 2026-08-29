@@ -171,12 +171,31 @@ export type Guest = {
   name: string;
   email: string;
   phone: string;
-  country: string;
+  /** El backend no guarda nacionalidad todavía: exigirla obligaría a inventarla. */
+  country?: string;
   /** Estancias previas. Alimenta el badge de huésped recurrente. */
-  previousStays: number;
+  previousStays?: number;
   notes?: string;
 };
 
+/**
+ * Una reserva, tal como la consumen las pantallas.
+ *
+ * Los campos opcionales lo son porque HOY no tienen respaldo en la API, no
+ * porque sean prescindibles:
+ *
+ * - `payment` y `balance` salen del modelo `Payment`, que existe en el schema
+ *   pero todavía no tiene endpoints ni registros. Hasta entonces no hay forma
+ *   honesta de decir quién debe.
+ * - `channel` necesita distinguir Booking de Airbnb de directo; el backend sólo
+ *   guarda `source` (DIRECT/STAFF/CHANNEL), y la sincronización con OTAs está
+ *   explícitamente fuera del alcance cotizado.
+ * - `adults`/`children`: la API guarda un solo total de huéspedes (`guests`).
+ *
+ * Son opcionales, y no `| null` con valores de relleno, para que TypeScript
+ * obligue a cada pantalla a decidir qué hacer cuando faltan en vez de dejar
+ * pasar un `$0.00` inventado a la cara de recepción.
+ */
 export type Reservation = {
   id: string;
   reference: string;
@@ -186,13 +205,15 @@ export type Reservation = {
   guest: Guest;
   range: DateRange;
   nights: number;
-  adults: number;
-  children: number;
+  /** Total de huéspedes de la estadía. */
+  guests: number;
+  adults?: number;
+  children?: number;
   status: ReservationStatus;
-  payment: PaymentStatus;
-  channel: Channel;
+  payment?: PaymentStatus;
+  channel?: Channel;
   total: Money;
-  balance: Money;
+  balance?: Money;
   createdAt: IsoDate;
   notes?: string;
 };
