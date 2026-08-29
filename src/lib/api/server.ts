@@ -95,6 +95,50 @@ export function getRatePlans(session: Session, unitTypeId: string): Promise<ApiR
   );
 }
 
+export type RatePlanInput = {
+  name: string;
+  startDate: string;
+  endDate: string;
+  priceMinor: number;
+  weekendPriceMinor?: number | null;
+  minNights?: number | null;
+  closed?: boolean;
+};
+
+export function postRatePlan(
+  session: Session,
+  unitTypeId: string,
+  input: RatePlanInput,
+): Promise<ApiRatePlan> {
+  return apiRequest<ApiRatePlan>(
+    `/orgs/${session.orgId}/properties/${session.property.id}/unit-types/${unitTypeId}/rate-plans`,
+    { method: "POST", headers: authHeader(session.token), body: JSON.stringify(input) },
+  );
+}
+
+export function patchRatePlan(
+  session: Session,
+  unitTypeId: string,
+  ratePlanId: string,
+  input: Partial<RatePlanInput>,
+): Promise<ApiRatePlan> {
+  return apiRequest<ApiRatePlan>(
+    `/orgs/${session.orgId}/properties/${session.property.id}/unit-types/${unitTypeId}/rate-plans/${ratePlanId}`,
+    { method: "PATCH", headers: authHeader(session.token), body: JSON.stringify(input) },
+  );
+}
+
+export function deleteRatePlan(
+  session: Session,
+  unitTypeId: string,
+  ratePlanId: string,
+): Promise<void> {
+  return apiRequest<void>(
+    `/orgs/${session.orgId}/properties/${session.property.id}/unit-types/${unitTypeId}/rate-plans/${ratePlanId}`,
+    { method: "DELETE", headers: authHeader(session.token) },
+  );
+}
+
 // --- Escrituras -------------------------------------------------------------
 
 export type NewBookingInput = {

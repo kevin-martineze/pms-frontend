@@ -2,10 +2,9 @@ import type { Metadata } from "next";
 import { lang } from "next/root-params";
 import { Info } from "lucide-react";
 
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getRateCalendar, getRatePlans, getUnitTypes } from "@/lib/api/server";
 import { NoAccess } from "@/components/admin/no-access";
+import { RatePlansEditor } from "@/components/admin/rate-plans-editor";
 import { canAccess } from "@/lib/auth/access";
 import { getSession } from "@/lib/auth/server-session";
 import {
@@ -186,54 +185,14 @@ export default async function RatesPage() {
 
       {/* --- Planes ---------------------------------------------------------- */}
       <section className="mt-6">
-        <h2 className="text-sm font-medium">{t.admin.rates.plansTitle}</h2>
-        <p className="mt-1 max-w-3xl text-xs text-muted-foreground">{t.admin.rates.plansLead}</p>
-
-        {allPlans.length === 0 ? (
-          <p className="mt-4 rounded-xl border border-dashed border-border px-4 py-8 text-center text-sm text-muted-foreground">
-            {t.admin.rates.noPlans}
-          </p>
-        ) : (
-          <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-            {allPlans.map((plan) => (
-              <Card key={plan.id}>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium">{plan.name}</CardTitle>
-                  <p className="text-xs text-muted-foreground">{plan.unitTypeName}</p>
-                </CardHeader>
-                <CardContent>
-                  {plan.closed ? (
-                    <p className="text-lg font-medium text-status-departing">
-                      {t.admin.rates.closedPlan}
-                    </p>
-                  ) : (
-                    <>
-                      <p className="tnum text-2xl font-medium">{money(plan.priceMinor)}</p>
-                      {plan.weekendPriceMinor !== null && (
-                        <p className="tnum mt-0.5 text-xs text-muted-foreground">
-                          {t.admin.rates.weekendRate(money(plan.weekendPriceMinor))}
-                        </p>
-                      )}
-                    </>
-                  )}
-
-                  <p className="mt-2 text-xs text-muted-foreground">
-                    {t.admin.rates.planRange(
-                      formatDate(plan.startDate.slice(0, 10), tag),
-                      formatDate(plan.endDate.slice(0, 10), tag),
-                    )}
-                  </p>
-
-                  {plan.minNights !== null && (
-                    <Badge variant="secondary" className="mt-3 text-[0.68rem]">
-                      {t.admin.rates.minNights(plan.minNights)}
-                    </Badge>
-                  )}
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )}
+        {/* Cruzan datos, no funciones: una función no se puede serializar de un
+            Server Component a uno de cliente. El formato se arma del otro lado. */}
+        <RatePlansEditor
+          unitTypes={unitTypes.map((type) => ({ id: type.id, name: type.name }))}
+          plans={allPlans}
+          currency={currency}
+          locale={tag}
+        />
       </section>
     </div>
   );

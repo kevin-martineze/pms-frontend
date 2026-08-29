@@ -400,6 +400,7 @@ export const es: Dictionary = {
       rates: "Tarifas",
       reports: "Reportes",
       sections: "Secciones del sistema",
+      property: "Alojamiento",
       outOfScope: "Fuera del alcance de este rol",
       viewAs: "Ver el sistema como…",
       synced: "Sincronizado",
@@ -673,6 +674,35 @@ export const es: Dictionary = {
       closedPlan: "Cerrado a la venta",
       planRange: (from, to) => `${from} → ${to}`,
       base: "Tarifa base",
+
+      newPlan: "Nueva temporada",
+      newTitle: "Nueva temporada",
+      editTitle: "Editar temporada",
+      dialogLead:
+        "Fija el precio por noche de un rango de fechas. Los precios van sin ITBMS: el sistema lo suma al cotizar.",
+      fieldUnitType: "Tipo de unidad",
+      fieldName: "Nombre",
+      namePlaceholder: "Temporada alta, Semana Santa…",
+      fieldStart: "Desde",
+      fieldEnd: "Hasta",
+      endInclusive: "La noche del último día se cobra a esta tarifa.",
+      fieldPrice: "Precio por noche",
+      fieldWeekend: "Precio de fin de semana",
+      sameAsWeekday: "Igual que entre semana",
+      weekendMeans: "Se aplica a viernes y sábado.",
+      fieldMinNights: "Estadía mínima",
+      noMinimum: "Sin mínimo",
+      fieldClosed: "Cerrar la venta en estas fechas",
+      closedHelp: "Nadie puede reservar esas noches. El plan queda guardado.",
+      badRange: "La fecha de fin no puede ser anterior a la de inicio.",
+      save: "Guardar",
+      saving: "Guardando…",
+      cancel: "Cancelar",
+      edit: "Editar",
+      delete: "Eliminar",
+      savedNew: "Temporada creada",
+      savedEdit: "Temporada actualizada",
+      deleted: (name) => `Se eliminó "${name}"`,
     },
 
     reports: {
@@ -706,6 +736,13 @@ export const es: Dictionary = {
         CHANNEL: "Portal externo",
       },
       empty: "Todavía no hay reservas en este período.",
+    },
+
+    error: {
+      title: "No se pudo cargar esta pantalla",
+      body: "Puede ser una caída momentánea de la conexión con el servidor. Probá de nuevo; si sigue igual, avisá.",
+      retry: "Reintentar",
+      details: "Detalle técnico",
     },
 
     noAccess: {

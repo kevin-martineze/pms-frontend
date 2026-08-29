@@ -391,6 +391,7 @@ export const en = {
       rates: "Rates",
       reports: "Reports",
       sections: "System sections",
+      property: "Property",
       outOfScope: "Outside this role's scope",
       viewAs: "View the system as…",
       synced: "Synced",
@@ -662,6 +663,35 @@ export const en = {
       closedPlan: "Closed for sale",
       planRange: (from: string, to: string) => `${from} → ${to}`,
       base: "Base rate",
+
+      newPlan: "New season",
+      newTitle: "New season",
+      editTitle: "Edit season",
+      dialogLead:
+        "Sets the nightly price for a date range. Prices go in without tax: the system adds it when quoting.",
+      fieldUnitType: "Unit type",
+      fieldName: "Name",
+      namePlaceholder: "High season, Easter week…",
+      fieldStart: "From",
+      fieldEnd: "To",
+      endInclusive: "The night of the last day is charged at this rate.",
+      fieldPrice: "Price per night",
+      fieldWeekend: "Weekend price",
+      sameAsWeekday: "Same as weekdays",
+      weekendMeans: "Applies to Friday and Saturday.",
+      fieldMinNights: "Minimum stay",
+      noMinimum: "No minimum",
+      fieldClosed: "Close these dates for sale",
+      closedHelp: "Nobody can book those nights. The plan stays saved.",
+      badRange: "The end date cannot be before the start date.",
+      save: "Save",
+      saving: "Saving…",
+      cancel: "Cancel",
+      edit: "Edit",
+      delete: "Delete",
+      savedNew: "Season created",
+      savedEdit: "Season updated",
+      deleted: (name: string) => `"${name}" deleted`,
     },
 
     reports: {
@@ -695,6 +725,13 @@ export const en = {
         CHANNEL: "External portal",
       },
       empty: "No bookings in this period yet.",
+    },
+
+    error: {
+      title: "This screen could not load",
+      body: "It may be a brief drop in the connection to the server. Try again; if it keeps happening, let someone know.",
+      retry: "Try again",
+      details: "Technical detail",
     },
 
     noAccess: {

@@ -4,8 +4,10 @@ import * as React from "react";
 import { usePathname, useRouter } from "next/navigation";
 import {
   BrushCleaning,
+  Building2,
   CalendarDays,
   ChartNoAxesColumn,
+  Check,
   ChevronsUpDown,
   LayoutDashboard,
   LogOut,
@@ -29,6 +31,7 @@ import {
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { LocaleLink } from "@/components/locale-link";
+import { selectProperty } from "@/lib/auth/property-actions";
 import { mapMemberRole } from "@/lib/auth/roles";
 import type { SessionSummary } from "@/lib/auth/types";
 import { ROLE_ACCESS } from "@/lib/auth/access";
@@ -61,6 +64,63 @@ type NavKey = (typeof NAV)[number]["key"];
 const RoleContext = React.createContext<StaffRole>("owner");
 export const useRole = () => React.useContext(RoleContext);
 
+/**
+ * Qué alojamiento se está mirando, y con cuántos alojamientos se cuenta.
+ *
+ * Con uno solo no es un menú sino una etiqueta: un desplegable de un elemento
+ * promete una elección que no existe. Con dos o más se vuelve selector, que es
+ * lo que hará falta cuando entren las casas.
+ */
+function PropertyPicker({
+  properties,
+  currentId,
+  currentName,
+}: {
+  properties: { id: string; name: string }[];
+  currentId: string;
+  currentName: string;
+}) {
+  const { t } = useI18n();
+  const [pending, startTransition] = React.useTransition();
+
+  if (properties.length <= 1) {
+    return <span className="truncate text-sm text-muted-foreground">{currentName}</span>;
+  }
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          variant="ghost"
+          className="h-9 min-w-0 gap-1.5 px-2 text-sm font-normal text-muted-foreground"
+          disabled={pending}
+        >
+          <Building2 className="size-4 shrink-0" aria-hidden />
+          <span className="truncate">{currentName}</span>
+          <ChevronsUpDown className="size-3.5 shrink-0 opacity-60" aria-hidden />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" className="w-64">
+        <DropdownMenuLabel>{t.admin.nav.property}</DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        {properties.map((property) => (
+          <DropdownMenuItem
+            key={property.id}
+            onSelect={() => startTransition(() => selectProperty(property.id))}
+            className="gap-2"
+          >
+            <Check
+              className={cn("size-4 shrink-0", property.id === currentId ? "" : "opacity-0")}
+              aria-hidden
+            />
+            <span className="truncate">{property.name}</span>
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
 function initialsFor(name: string): string {
   const clean = name.replace(/\(.*?\)/g, "").trim();
   const parts = clean.split(/\s+/).filter(Boolean);
@@ -71,9 +131,13 @@ function initialsFor(name: string): string {
 export function AdminShell({
   children,
   session,
+  properties,
+  currentPropertyId,
 }: {
   children: React.ReactNode;
   session: SessionSummary;
+  properties: { id: string; name: string }[];
+  currentPropertyId: string;
 }) {
   const { t } = useI18n();
   const router = useRouter();
@@ -114,9 +178,11 @@ export function AdminShell({
               </SheetContent>
             </Sheet>
 
-            <span className="truncate text-sm text-muted-foreground">
-              {session.propertyName}
-            </span>
+            <PropertyPicker
+              properties={properties}
+              currentId={currentPropertyId}
+              currentName={session.propertyName}
+            />
 
             <div className="ml-auto flex items-center gap-2">
               <Badge variant="outline" className="hidden gap-1.5 sm:flex">
