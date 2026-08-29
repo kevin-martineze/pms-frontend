@@ -17,6 +17,8 @@ import { NewBookingDialog } from "@/components/admin/new-booking-dialog";
 import { ReservationFilters } from "@/components/admin/reservation-filters";
 import { StatCard } from "@/components/admin/stat-card";
 import { getBookings, getUnitTypes } from "@/lib/api/server";
+import { NoAccess } from "@/components/admin/no-access";
+import { canAccess } from "@/lib/auth/access";
 import { getSession } from "@/lib/auth/server-session";
 import { toReservation } from "@/lib/bookings/mapper";
 import { formatDateShort, formatMoney, toIsoDate } from "@/lib/format";
@@ -41,6 +43,10 @@ export default async function ReservationsPage({
 
   const session = await getSession();
   if (!session) return null;
+
+  if (!canAccess(session.role, "reservations")) {
+    return <NoAccess t={t} section={t.admin.nav.reservations} />;
+  }
 
   const [bookings, unitTypes] = await Promise.all([
     getBookings(session),

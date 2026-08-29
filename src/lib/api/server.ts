@@ -188,6 +188,54 @@ export function getHousekeepingBoard(
   );
 }
 
+// ---------------------------------------------------------------------------
+// Reportes
+// ---------------------------------------------------------------------------
+
+export type PerformanceReport = {
+  from: string;
+  to: string;
+  windowNights: number;
+  revenue: {
+    /** Sin impuesto. Es el ingreso del hotel; el ITBMS se cobra para la DGI. */
+    netMinor: number;
+    taxMinor: number;
+    grossMinor: number;
+    /** Mismo largo de período, pegado al anterior. */
+    previousNetMinor: number;
+  };
+  occupancy: { nightsSold: number; nightsAvailable: number; rate: number };
+  adrMinor: number;
+  revparMinor: number;
+  byUnitType: {
+    unitTypeId: string;
+    name: string;
+    units: number;
+    nightsSold: number;
+    nightsAvailable: number;
+    occupancy: number;
+    adrMinor: number;
+    netMinor: number;
+  }[];
+  bySource: {
+    source: "DIRECT" | "STAFF" | "CHANNEL";
+    bookings: number;
+    nightsSold: number;
+    netMinor: number;
+  }[];
+};
+
+/** `to` es exclusivo, igual que un check-out: la noche del `to` no entra. */
+export function getPerformanceReport(
+  session: Session,
+  range: { from: string; to: string },
+): Promise<PerformanceReport> {
+  return apiRequest<PerformanceReport>(
+    `/orgs/${session.orgId}/properties/${session.property.id}/reports/performance?from=${range.from}&to=${range.to}`,
+    { headers: authHeader(session.token) },
+  );
+}
+
 export type HousekeepingUpdate = {
   status?: HousekeepingStatus;
   note?: string;

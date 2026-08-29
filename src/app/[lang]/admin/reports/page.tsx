@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { lang } from "next/root-params";
 
-import { Badge } from "@/components/ui/badge";
+import { NoAccess } from "@/components/admin/no-access";
+import { StatCard } from "@/components/admin/stat-card";
 import {
   Table,
   TableBody,
@@ -10,13 +11,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { CHANNEL_COMMISSION } from "@/components/admin/labels";
-import { StatCard } from "@/components/admin/stat-card";
-import { addDays, formatDate } from "@/lib/format";
+import { getPerformanceReport } from "@/lib/api/server";
+import { canAccess } from "@/lib/auth/access";
+import { getSession } from "@/lib/auth/server-session";
+import { addDays, formatDate, toIsoDate } from "@/lib/format";
 import { getDictionary, intlTag, resolveLocale } from "@/lib/i18n";
-import { unitName } from "@/lib/i18n/content";
-import { allRooms, units } from "@/lib/mock/property";
-import { TODAY, channelMix, inHouseOn, reservations, revenueBetween } from "@/lib/mock/reservations";
 import { cn } from "@/lib/utils";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -24,83 +23,49 @@ export async function generateMetadata(): Promise<Metadata> {
   return { title: t.admin.nav.reports };
 }
 
+const PERIOD_NIGHTS = 30;
+
 export default async function ReportsPage() {
   const locale = resolveLocale(await lang());
   const t = getDictionary(locale);
   const tag = intlTag(locale);
-  const nf = new Intl.NumberFormat(tag);
 
-  const from = addDays(TODAY, -29);
-  const to = addDays(TODAY, 1);
+  const session = await getSession();
+  if (!session) return null;
 
-  const revenue = revenueBetween(from, to);
-  const previous = revenueBetween(addDays(TODAY, -59), addDays(TODAY, -29));
-
-  const nightsSold = Array.from({ length: 30 }, (_, i) => inHouseOn(addDays(from, i)).length).reduce(
-    (a, b) => a + b,
-    0,
-  );
-  const nightsAvailable = allRooms.length * 30;
-  const occupancy = nightsSold / nightsAvailable;
-  const adr = nightsSold === 0 ? 0 : revenue / nightsSold;
-
-  const mix = channelMix(from, to);
-  const commissionPaid = mix.reduce(
-    (acc, row) => acc + row.revenue * CHANNEL_COMMISSION[row.channel],
-    0,
-  );
-  const directShare =
-    mix.filter((r) => CHANNEL_COMMISSION[r.channel] === 0).reduce((acc, r) => acc + r.revenue, 0) /
-    (revenue || 1);
-
-  /* Rendimiento por tipo de unidad. Es el reporte que decide qué se remodela
-     primero y qué tarifa se sube: una unidad al 90% está barata. */
-  const byUnit = units
-    .map((unit) => {
-      const stays = reservations.filter(
-        (r) =>
-          r.unitId === unit.id &&
-          r.status !== "cancelled" &&
-          r.range.checkOut > from &&
-          r.range.checkIn < to,
-      );
-      let nights = 0;
-      let income = 0;
-      for (const stay of stays) {
-        for (let d = stay.range.checkIn; d < stay.range.checkOut; d = addDays(d, 1)) {
-          if (d >= from && d < to) {
-            nights += 1;
-            income += stay.total.amountMinor / stay.nights / 100;
-          }
-        }
-      }
-      const capacity = unit.inventoryCount * 30;
-      return {
-        unit,
-        nights,
-        income,
-        occupancy: capacity === 0 ? 0 : nights / capacity,
-        adr: nights === 0 ? 0 : income / nights,
-      };
-    })
-    .sort((a, b) => b.income - a.income);
-
-  const countries = new Map<string, number>();
-  for (const r of reservations) {
-    if (r.range.checkIn < from || r.range.checkIn >= to) continue;
-    /* La nacionalidad es opcional desde que el tipo refleja lo que la API
-       guarda de verdad. Esta pantalla todavía corre sobre datos de
-       demostración, donde siempre viene. */
-    if (!r.guest.country) continue;
-    countries.set(r.guest.country, (countries.get(r.guest.country) ?? 0) + 1);
+  /* El backend ya devuelve 403 a quien no sea OWNER o MANAGER. Esto evita que
+     alguien llegue a una pantalla vacía y confusa escribiendo la URL: sin este
+     control, recepción vería el reporte sin datos y creería que el hotel no
+     vendió nada. */
+  if (!canAccess(session.role, "reports")) {
+    return <NoAccess t={t} section={t.admin.nav.reports} />;
   }
-  const topCountries = [...countries.entries()].sort((a, b) => b[1] - a[1]).slice(0, 6);
+
+  const money = (minor: number) =>
+    new Intl.NumberFormat(tag, {
+      style: "currency",
+      currency: session.property.currency ?? "USD",
+      maximumFractionDigits: 0,
+    }).format(minor / 100);
+
+  const today = toIsoDate(new Date());
+  /* `to` exclusivo y un día adelante: el período termina esta noche, así que
+     incluye la noche de hoy. */
+  const to = addDays(today, 1);
+  const from = addDays(to, -PERIOD_NIGHTS);
+
+  const report = await getPerformanceReport(session, { from, to });
+
+  const { revenue, occupancy } = report;
+  const previous = revenue.previousNetMinor;
+  const deltaPct =
+    previous === 0 ? null : Math.round(((revenue.netMinor - previous) / previous) * 100);
 
   return (
     <div className="mx-auto max-w-[92rem] px-4 py-6 md:px-6 md:py-8">
       <header>
         <p className="eyebrow text-muted-foreground">
-          {formatDate(from, tag)} → {formatDate(TODAY, tag)}
+          {formatDate(from, tag)} → {formatDate(today, tag)}
         </p>
         <h1 className="display-sm mt-1.5 text-2xl md:text-3xl">{t.admin.reports.title}</h1>
         <p className="mt-2 max-w-2xl text-sm text-muted-foreground">{t.admin.reports.lead}</p>
@@ -109,33 +74,47 @@ export default async function ReportsPage() {
       <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
           label={t.admin.reports.revenue}
-          value={`$${nf.format(Math.round(revenue))}`}
-          hint={t.admin.reports.revenueHint}
-          delta={{
-            value: `${Math.abs(Math.round(((revenue - previous) / (previous || 1)) * 100))}%`,
-            direction: revenue > previous ? "up" : revenue < previous ? "down" : "flat",
-          }}
+          value={money(revenue.netMinor)}
+          hint={
+            deltaPct === null
+              ? t.admin.reports.revenueNet
+              : t.admin.reports.revenueHint
+          }
+          delta={
+            deltaPct === null
+              ? undefined
+              : {
+                  value: `${Math.abs(deltaPct)}%`,
+                  direction: deltaPct > 0 ? "up" : deltaPct < 0 ? "down" : "flat",
+                }
+          }
         />
         <StatCard
           label={t.admin.reports.occupancy}
-          value={`${Math.round(occupancy * 100)}%`}
-          hint={t.admin.reports.occupancyHint(nightsSold, nightsAvailable)}
+          value={`${Math.round(occupancy.rate * 100)}%`}
+          hint={t.admin.reports.occupancyHint(
+            occupancy.nightsSold,
+            occupancy.nightsAvailable,
+          )}
         />
         <StatCard
           label={t.admin.reports.adr}
-          value={`$${Math.round(adr)}`}
+          value={money(report.adrMinor)}
           hint={t.admin.reports.adrHint}
         />
         <StatCard
-          label={t.admin.reports.commission}
-          value={`$${nf.format(Math.round(commissionPaid))}`}
-          hint={t.admin.reports.commissionHint(Math.round(directShare * 100))}
-          tone="warning"
+          label={t.admin.reports.revpar}
+          value={money(report.revparMinor)}
+          hint={t.admin.reports.revparHint}
         />
       </div>
 
+      {/* El impuesto, aparte y explícito: no es ingreso del hotel. */}
+      <p className="mt-3 text-xs text-muted-foreground">
+        {t.admin.reports.taxCollected(money(revenue.taxMinor))}
+      </p>
+
       <div className="mt-6 grid gap-5 xl:grid-cols-[1.3fr_1fr]">
-        {/* --- Rendimiento por unidad --------------------------------------- */}
         <section className="overflow-hidden rounded-xl border border-border bg-card">
           <header className="border-b border-border px-4 py-3">
             <h2 className="text-sm font-medium">{t.admin.reports.byUnitTitle}</h2>
@@ -153,109 +132,68 @@ export default async function ReportsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {byUnit.map((row) => (
-                  <TableRow key={row.unit.id}>
-                    <TableCell>
-                      <span className="block font-medium">{unitName(row.unit, locale)}</span>
-                      <span className="block text-xs text-muted-foreground">
-                        {t.admin.reports.keys(row.unit.inventoryCount)}
-                      </span>
-                    </TableCell>
-                    <TableCell className="tnum text-right">{row.nights}</TableCell>
-                    <TableCell className="tnum text-right">
-                      <span
-                        className={cn(
-                          row.occupancy >= 0.85 && "font-medium text-status-vacant-clean",
-                          row.occupancy < 0.4 && "text-status-departing",
-                        )}
-                      >
-                        {Math.round(row.occupancy * 100)}%
-                      </span>
-                    </TableCell>
-                    <TableCell className="tnum text-right">${Math.round(row.adr)}</TableCell>
-                    <TableCell className="tnum text-right font-medium">
-                      ${nf.format(Math.round(row.income))}
-                    </TableCell>
-                  </TableRow>
-                ))}
+                {[...report.byUnitType]
+                  .sort((a, b) => b.netMinor - a.netMinor)
+                  .map((row) => (
+                    <TableRow key={row.unitTypeId}>
+                      <TableCell>
+                        <span className="block font-medium">{row.name}</span>
+                        <span className="block text-xs text-muted-foreground">
+                          {t.admin.reports.keys(row.units)}
+                        </span>
+                      </TableCell>
+                      <TableCell className="tnum text-right">{row.nightsSold}</TableCell>
+                      <TableCell className="tnum text-right">
+                        <span
+                          className={cn(
+                            row.occupancy >= 0.85 && "font-medium text-status-vacant-clean",
+                            row.occupancy < 0.4 && "text-status-departing",
+                          )}
+                        >
+                          {Math.round(row.occupancy * 100)}%
+                        </span>
+                      </TableCell>
+                      <TableCell className="tnum text-right">{money(row.adrMinor)}</TableCell>
+                      <TableCell className="tnum text-right font-medium">
+                        {money(row.netMinor)}
+                      </TableCell>
+                    </TableRow>
+                  ))}
               </TableBody>
             </Table>
           </div>
         </section>
 
-        <div className="space-y-5">
-          {/* --- Costo por canal ------------------------------------------- */}
-          <section className="overflow-hidden rounded-xl border border-border bg-card">
-            <header className="border-b border-border px-4 py-3">
-              <h2 className="text-sm font-medium">{t.admin.reports.channelCostTitle}</h2>
-            </header>
+        <section className="overflow-hidden rounded-xl border border-border bg-card">
+          <header className="border-b border-border px-4 py-3">
+            <h2 className="text-sm font-medium">{t.admin.reports.sourceTitle}</h2>
+            <p className="mt-0.5 text-xs text-muted-foreground">{t.admin.reports.sourceSub}</p>
+          </header>
+          {report.bySource.length === 0 ? (
+            <p className="px-4 py-6 text-sm text-muted-foreground">{t.admin.reports.empty}</p>
+          ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>{t.admin.reports.colChannel}</TableHead>
+                  <TableHead>{t.admin.reports.colSource}</TableHead>
+                  <TableHead className="text-right">{t.admin.reports.colBookings}</TableHead>
                   <TableHead className="text-right">{t.admin.reports.colRevenue}</TableHead>
-                  <TableHead className="text-right">{t.admin.reports.colCommission}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {mix.map((row) => {
-                  const fee = row.revenue * CHANNEL_COMMISSION[row.channel];
-                  return (
-                    <TableRow key={row.channel}>
-                      <TableCell>
-                        {t.admin.channelsShort[row.channel]}
-                        {fee === 0 && (
-                          <Badge
-                            variant="secondary"
-                            className="ml-2 bg-butter/25 text-[0.62rem] text-accent-foreground"
-                          >
-                            {t.admin.reports.ownTag}
-                          </Badge>
-                        )}
-                      </TableCell>
-                      <TableCell className="tnum text-right">
-                        ${nf.format(Math.round(row.revenue))}
-                      </TableCell>
-                      <TableCell
-                        className={cn(
-                          "tnum text-right",
-                          fee > 0 ? "text-status-departing" : "text-status-vacant-clean",
-                        )}
-                      >
-                        {fee > 0 ? `−$${nf.format(Math.round(fee))}` : "$0"}
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
+                {report.bySource.map((row) => (
+                  <TableRow key={row.source}>
+                    <TableCell>{t.admin.reports.sources[row.source]}</TableCell>
+                    <TableCell className="tnum text-right">{row.bookings}</TableCell>
+                    <TableCell className="tnum text-right font-medium">
+                      {money(row.netMinor)}
+                    </TableCell>
+                  </TableRow>
+                ))}
               </TableBody>
             </Table>
-          </section>
-
-          {/* --- Procedencia ------------------------------------------------ */}
-          <section className="rounded-xl border border-border bg-card p-4">
-            <h2 className="text-sm font-medium">{t.admin.reports.originTitle}</h2>
-            <p className="mt-0.5 text-xs text-muted-foreground">{t.admin.reports.originSub}</p>
-            <ul className="mt-4 space-y-2.5">
-              {topCountries.map(([country, count]) => {
-                const share = count / (topCountries[0]?.[1] || 1);
-                return (
-                  <li key={country} className="flex items-center gap-3 text-sm">
-                    <span className="w-8 shrink-0 font-medium">{country}</span>
-                    <span className="h-2 flex-1 overflow-hidden rounded-full bg-secondary">
-                      <span
-                        className="block h-full rounded-full bg-palm/70"
-                        style={{ width: `${share * 100}%` }}
-                      />
-                    </span>
-                    <span className="tnum w-6 shrink-0 text-right text-muted-foreground">
-                      {count}
-                    </span>
-                  </li>
-                );
-              })}
-            </ul>
-          </section>
-        </div>
+          )}
+        </section>
       </div>
     </div>
   );

@@ -2,7 +2,9 @@ import type { Metadata } from "next";
 import { lang } from "next/root-params";
 
 import { HousekeepingBoard } from "@/components/admin/housekeeping-board";
+import { NoAccess } from "@/components/admin/no-access";
 import { getHousekeepingBoard } from "@/lib/api/server";
+import { canAccess } from "@/lib/auth/access";
 import { getSession } from "@/lib/auth/server-session";
 import { formatDate, formatWeekday, toIsoDate } from "@/lib/format";
 import { getDictionary, intlTag, resolveLocale } from "@/lib/i18n";
@@ -19,6 +21,10 @@ export default async function HousekeepingPage() {
 
   const session = await getSession();
   if (!session) return null;
+
+  if (!canAccess(session.role, "housekeeping")) {
+    return <NoAccess t={t} section={t.admin.nav.housekeeping} />;
+  }
 
   /* El día se calcula acá, en el servidor de Next, y viaja como parámetro. La
      API corre en UTC: si la dejáramos decidir, en Panamá el tablero cambiaría

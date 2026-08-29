@@ -6,7 +6,9 @@ import { OccupancyStrip } from "@/components/admin/charts";
 import { StatCard } from "@/components/admin/stat-card";
 import { TodayLists } from "@/components/admin/today-lists";
 import { LocaleLink } from "@/components/locale-link";
+import { NoAccess } from "@/components/admin/no-access";
 import { getBookings, getUnits } from "@/lib/api/server";
+import { canAccess } from "@/lib/auth/access";
 import { getSession } from "@/lib/auth/server-session";
 import { toReservation } from "@/lib/bookings/mapper";
 import {
@@ -28,6 +30,12 @@ export default async function AdminDashboard() {
 
   const session = await getSession();
   if (!session) return null;
+
+  /* El backend restringe por endpoint; esto impide llegar a la pantalla
+     escribiendo la URL. Ocultar el enlace nunca fue un control de acceso. */
+  if (!canAccess(session.role, "dashboard")) {
+    return <NoAccess t={t} section={t.admin.nav.today} />;
+  }
 
   const today = toIsoDate(new Date());
 

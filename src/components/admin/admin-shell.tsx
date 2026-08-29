@@ -31,7 +31,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { LocaleLink } from "@/components/locale-link";
 import { mapMemberRole } from "@/lib/auth/roles";
 import type { SessionSummary } from "@/lib/auth/types";
-import { ROLE_ACCESS } from "@/lib/mock/operations";
+import { ROLE_ACCESS } from "@/lib/auth/access";
 import { withLocale } from "@/lib/i18n/paths";
 import { useI18n } from "@/lib/i18n/provider";
 import type { StaffRole } from "@/lib/domain/types";

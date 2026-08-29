@@ -5,6 +5,8 @@ import { Info } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getRateCalendar, getRatePlans, getUnitTypes } from "@/lib/api/server";
+import { NoAccess } from "@/components/admin/no-access";
+import { canAccess } from "@/lib/auth/access";
 import { getSession } from "@/lib/auth/server-session";
 import {
   addDays,
@@ -31,6 +33,11 @@ export default async function RatesPage() {
 
   const session = await getSession();
   if (!session) return null;
+
+  /* Las tarifas son decisión de negocio: recepción y camarería no las tocan. */
+  if (!canAccess(session.role, "rates")) {
+    return <NoAccess t={t} section={t.admin.nav.rates} />;
+  }
 
   const today = toIsoDate(new Date());
   const lastDay = addDays(today, DAYS - 1);

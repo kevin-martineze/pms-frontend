@@ -4,6 +4,8 @@ import { lang } from "next/root-params";
 import { StatCard } from "@/components/admin/stat-card";
 import { TapeChart, type TapeRow } from "@/components/admin/tape-chart";
 import { getBookings, getUnits, getUnitTypes } from "@/lib/api/server";
+import { NoAccess } from "@/components/admin/no-access";
+import { canAccess } from "@/lib/auth/access";
 import { getSession } from "@/lib/auth/server-session";
 import { toReservation } from "@/lib/bookings/mapper";
 import { inHouseOn, occupancyOn } from "@/lib/bookings/queries";
@@ -21,6 +23,10 @@ export default async function CalendarPage() {
 
   const session = await getSession();
   if (!session) return null; // El layout ya mostró el login; esto es sólo para el tipo.
+
+  if (!canAccess(session.role, "calendar")) {
+    return <NoAccess t={t} section={t.admin.nav.calendar} />;
+  }
 
   const today = toIsoDate(new Date());
   const windowStart = addDays(today, -21);

@@ -20,18 +20,9 @@ export const staff: StaffMember[] = [
   { id: "s-tony", name: "Tony", role: "restaurant", initials: "TO", shift: "11:00 – 22:00" },
 ];
 
-/**
- * Lo que cada rol puede ver. La demo lo usa para el selector "ver el sistema
- * como…", que es la forma más rápida de mostrarle a Julius que su recepcionista
- * no va a ver los números del mes.
- */
-export const ROLE_ACCESS: Record<StaffMember["role"], string[]> = {
-  owner: ["dashboard", "calendar", "reservations", "guests", "housekeeping", "rates", "reports"],
-  manager: ["dashboard", "calendar", "reservations", "guests", "housekeeping", "rates", "reports"],
-  "front-desk": ["dashboard", "calendar", "reservations", "guests"],
-  housekeeping: ["housekeeping"],
-  restaurant: ["dashboard"],
-};
+/* `ROLE_ACCESS` se mudó a `lib/auth/access.ts`. Dejó de ser dato de
+   demostración el día que empezó a decidir a qué páginas entra cada persona, y
+   entre los mocks corría el riesgo de irse a la basura junto con ellos. */
 
 /**
  * Estado de cada habitación hoy, derivado de las reservas.
