@@ -21,7 +21,7 @@ import {
   revenueBetween,
   revparOn,
 } from "@/lib/bookings/queries";
-import { addDays, formatDate, formatWeekday, toIsoDate } from "@/lib/format";
+import { addDays, formatDate, formatMoney, formatWeekday, toIsoDate } from "@/lib/format";
 import { getDictionary, intlTag, resolveLocale } from "@/lib/i18n";
 
 export default async function AdminDashboard() {
@@ -75,7 +75,12 @@ export default async function AdminDashboard() {
     };
   });
 
-  const nf = new Intl.NumberFormat(tag);
+  /* Una sola función de dinero en todo el sistema. Antes esta pantalla armaba
+     el símbolo a mano (`$${...}`) y Reportes usaba `Intl`: el mismo hotel
+     mostraba "$320" acá y "USD 325" allá. Además, un `$` escrito a mano se
+     rompe el día que un alojamiento use otra moneda — y el campo ya existe. */
+  const money = (amountMinor: number) =>
+    formatMoney({ amountMinor, currency: session.property.currency }, tag);
 
   /* La sección de canales y el aviso de "por cobrar" salieron de esta pantalla:
      el desglose por OTA y el registro de pagos todavía no existen en el
@@ -115,19 +120,19 @@ export default async function AdminDashboard() {
         />
         <StatCard
           label={t.admin.dashboard.adr}
-          value={`$${Math.round(adr)}`}
+          value={money(Math.round(adr) * 100)}
           hint={t.admin.dashboard.adrHint}
           icon={<DollarSign className="size-4" aria-hidden />}
         />
         <StatCard
           label={t.admin.dashboard.revpar}
-          value={`$${Math.round(revpar)}`}
+          value={money(Math.round(revpar) * 100)}
           hint={t.admin.dashboard.revparHint}
           icon={<TrendingUp className="size-4" aria-hidden />}
         />
         <StatCard
           label={t.admin.dashboard.revenue30}
-          value={`$${nf.format(Math.round(monthRevenue))}`}
+          value={money(Math.round(monthRevenue) * 100)}
           hint={t.admin.dashboard.revenue30Hint}
           icon={<BedDouble className="size-4" aria-hidden />}
         />

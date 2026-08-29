@@ -14,7 +14,7 @@ import {
 import { getPerformanceReport } from "@/lib/api/server";
 import { canAccess } from "@/lib/auth/access";
 import { getSession } from "@/lib/auth/server-session";
-import { addDays, formatDate, toIsoDate } from "@/lib/format";
+import { addDays, formatDate, formatMoney, toIsoDate } from "@/lib/format";
 import { getDictionary, intlTag, resolveLocale } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
@@ -41,12 +41,10 @@ export default async function ReportsPage() {
     return <NoAccess t={t} section={t.admin.nav.reports} />;
   }
 
+  /* La misma función que el resto del sistema. Tenía su propio `Intl` acá, y en
+     `es-PA` rendía "USD 325" mientras el panel de Hoy decía "$320". */
   const money = (minor: number) =>
-    new Intl.NumberFormat(tag, {
-      style: "currency",
-      currency: session.property.currency ?? "USD",
-      maximumFractionDigits: 0,
-    }).format(minor / 100);
+    formatMoney({ amountMinor: minor, currency: session.property.currency }, tag);
 
   const today = toIsoDate(new Date());
   /* `to` exclusivo y un día adelante: el período termina esta noche, así que

@@ -8,6 +8,17 @@ export function formatMoney(money: Money, locale = "en-US"): string {
   return new Intl.NumberFormat(locale, {
     style: "currency",
     currency: money.currency,
+    /* `narrowSymbol` fuerza "$325" en vez de "USD 325".
+     *
+     * En `es-PA` la moneda local es el balboa, así que Intl trata al dólar como
+     * extranjero y le antepone el código para desambiguar. Es correcto según el
+     * estándar y equivocado para Panamá: el balboa circula a la par y sólo en
+     * monedas, todo el mundo escribe precios con `$`, y "USD 325" en la carta
+     * de un hotel panameño se lee como un error del sistema.
+     *
+     * Sin esto la misma aplicación mostraba "$320" en un panel y "USD 325" en
+     * otro. */
+    currencyDisplay: "narrowSymbol",
     minimumFractionDigits: money.amountMinor % 100 === 0 ? 0 : 2,
     maximumFractionDigits: 2,
   }).format(money.amountMinor / 100);
