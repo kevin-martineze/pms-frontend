@@ -441,6 +441,7 @@ export const es: Dictionary = {
       rates: "Tarifas",
       reports: "Reportes",
       sections: "Secciones del sistema",
+      settings: "Configuración",
       property: "Alojamiento",
       outOfScope: "Fuera del alcance de este rol",
       viewAs: "Ver el sistema como…",
@@ -796,6 +797,90 @@ export const es: Dictionary = {
       details: "Detalle técnico",
     },
 
+
+    settings: {
+      title: "Configuración",
+      lead: "El inventario del alojamiento y quiénes trabajan acá. Es lo que permite que el hotel opere el sistema sin llamar al programador.",
+
+      inventoryTitle: "Habitaciones y tipos",
+      inventoryLead:
+        "El tipo es lo que se vende y lo que lleva el precio. La habitación es la llave física que se le entrega al huésped. Las tarifas y la disponibilidad cuelgan del tipo; el número de puerta vive en la habitación.",
+      newType: "Nuevo tipo",
+      noTypes: "Todavía no hay tipos de habitación. Empezá con uno — por ejemplo \"Standard Doble\".",
+      noRooms: "Este tipo todavía no tiene habitaciones.",
+      addRoom: "Agregar habitación",
+      typeSummary: (price, guests, rooms) =>
+        `${price} por noche · hasta ${guests} huéspedes · ${rooms} ${rooms === 1 ? "habitación" : "habitaciones"}`,
+      outOfService: "Fuera de servicio",
+
+      newTypeTitle: "Nuevo tipo de habitación",
+      editTypeTitle: "Editar tipo de habitación",
+      typeLead: "La tarifa base se aplica a cualquier noche que no cubra una temporada.",
+      typeName: "Nombre",
+      typeNamePlaceholder: "Standard Doble, Suite con terraza…",
+      typeDescription: "Descripción (opcional)",
+      basePrice: "Tarifa base",
+      maxGuests: "Máx. huéspedes",
+      beds: "Camas",
+      minNights: "Mín. noches",
+      priceNote: "Los precios se cargan sin ITBMS. El sistema lo suma al cotizar.",
+
+      newRoomTitle: "Nueva habitación",
+      editRoomTitle: "Editar habitación",
+      roomLead: "El número o nombre que usa el personal. Nunca aparece en el sitio público.",
+      roomLabel: "Número o nombre",
+      roomType: "Tipo",
+      markOutOfService: "Fuera de servicio",
+      outOfServiceHelp: "Deja de venderse. Las reservas ya tomadas no se tocan.",
+
+      teamTitle: "El equipo",
+      teamLead:
+        "Quiénes trabajan acá y qué puede ver cada uno. Camarería sólo ve su tablero; recepción no ve los ingresos.",
+      addMember: "Agregar a alguien",
+      addMemberTitle: "Agregar a alguien al equipo",
+      addMemberLead: "Generamos una contraseña temporal y la mostramos una sola vez.",
+      memberName: "Nombre completo",
+      memberEmail: "Correo",
+      memberRole: "Rol",
+      create: "Crear cuenta",
+      you: "vos",
+      locked: "Bloqueada",
+      resetPassword: "Contraseña nueva",
+      removeMember: "Sacar del equipo",
+      roles: {
+        OWNER: "Propietario",
+        MANAGER: "Gerencia",
+        FRONT_DESK: "Recepción",
+        HOUSEKEEPING: "Camarería",
+      },
+      roleChanged: (name) => `Se actualizó el rol de ${name}.`,
+      memberRemoved: (name) => `${name} salió del equipo.`,
+      memberAddedExisting: (name) =>
+        `${name} ya tenía cuenta y se sumó al equipo con ella.`,
+
+      credentialsTitle: (name) => `Credenciales de ${name}`,
+      credentialsLead: "Mandáselas. Pedile que cambie la contraseña la primera vez que entre.",
+      temporaryPassword: "Contraseña temporal",
+      credentialsWarning:
+        "Es la única vez que se muestra la contraseña. Si se pierde, generá otra.",
+      copy: "Copiar",
+      copied: "Copiado",
+      copyFailed: "No se pudo copiar. Seleccionala a mano.",
+      done: "Listo",
+
+      edit: "Editar",
+      delete: "Eliminar",
+      save: "Guardar",
+      saving: "Guardando…",
+      cancel: "Cancelar",
+      failed: "No se pudo guardar el cambio.",
+      typeCreated: "Tipo creado",
+      typeSaved: "Tipo actualizado",
+      typeDeleted: (name) => `Se eliminó "${name}"`,
+      roomCreated: "Habitación creada",
+      roomSaved: "Habitación actualizada",
+      roomDeleted: (label) => `Se eliminó la habitación ${label}`,
+    },
     noAccess: {
       title: "Esta sección no es para tu rol",
       body: (section) =>

@@ -315,3 +315,155 @@ export function patchHousekeeping(
     },
   );
 }
+
+// ---------------------------------------------------------------------------
+// Inventario y equipo — la configuración que hace al hotel operable sin mí
+// ---------------------------------------------------------------------------
+
+export type UnitTypeInput = {
+  name: string;
+  slug: string;
+  description?: string | null;
+  maxGuests: number;
+  bedrooms?: number;
+  beds?: number;
+  basePriceMinor: number;
+  minNights?: number;
+};
+
+export function postUnitType(session: Session, input: UnitTypeInput): Promise<ApiUnitType> {
+  return apiRequest<ApiUnitType>(
+    `/orgs/${session.orgId}/properties/${session.property.id}/unit-types`,
+    { method: "POST", headers: authHeader(session.token), body: JSON.stringify(input) },
+  );
+}
+
+export function patchUnitType(
+  session: Session,
+  unitTypeId: string,
+  input: Partial<UnitTypeInput>,
+): Promise<ApiUnitType> {
+  return apiRequest<ApiUnitType>(
+    `/orgs/${session.orgId}/properties/${session.property.id}/unit-types/${unitTypeId}`,
+    { method: "PATCH", headers: authHeader(session.token), body: JSON.stringify(input) },
+  );
+}
+
+export function deleteUnitType(session: Session, unitTypeId: string): Promise<void> {
+  return apiRequest<void>(
+    `/orgs/${session.orgId}/properties/${session.property.id}/unit-types/${unitTypeId}`,
+    { method: "DELETE", headers: authHeader(session.token) },
+  );
+}
+
+export type UnitInput = { label: string; unitTypeId: string; active?: boolean };
+
+export function postUnit(session: Session, input: UnitInput): Promise<ApiUnit> {
+  return apiRequest<ApiUnit>(
+    `/orgs/${session.orgId}/properties/${session.property.id}/units`,
+    { method: "POST", headers: authHeader(session.token), body: JSON.stringify(input) },
+  );
+}
+
+export function patchUnit(
+  session: Session,
+  unitId: string,
+  input: Partial<UnitInput>,
+): Promise<ApiUnit> {
+  return apiRequest<ApiUnit>(
+    `/orgs/${session.orgId}/properties/${session.property.id}/units/${unitId}`,
+    { method: "PATCH", headers: authHeader(session.token), body: JSON.stringify(input) },
+  );
+}
+
+export function deleteUnit(session: Session, unitId: string): Promise<void> {
+  return apiRequest<void>(
+    `/orgs/${session.orgId}/properties/${session.property.id}/units/${unitId}`,
+    { method: "DELETE", headers: authHeader(session.token) },
+  );
+}
+
+export type Member = {
+  userId: string;
+  name: string;
+  email: string;
+  role: "OWNER" | "MANAGER" | "FRONT_DESK" | "HOUSEKEEPING";
+  lockedUntil: string | null;
+  createdAt: string;
+};
+
+export function getMembers(session: Session): Promise<Member[]> {
+  return apiRequest<Member[]>(`/orgs/${session.orgId}/members`, {
+    headers: authHeader(session.token),
+  });
+}
+
+export type NewMemberInput = { fullName: string; email: string; role: Member["role"] };
+
+/** `temporaryPassword` es `null` cuando la persona ya tenía cuenta. */
+export type NewMemberResult = {
+  userId: string;
+  email: string;
+  name: string;
+  role: Member["role"];
+  temporaryPassword: string | null;
+};
+
+export function postMember(
+  session: Session,
+  input: NewMemberInput,
+): Promise<NewMemberResult> {
+  return apiRequest<NewMemberResult>(`/orgs/${session.orgId}/members`, {
+    method: "POST",
+    headers: authHeader(session.token),
+    body: JSON.stringify(input),
+  });
+}
+
+export function patchMember(
+  session: Session,
+  userId: string,
+  role: Member["role"],
+): Promise<Member> {
+  return apiRequest<Member>(`/orgs/${session.orgId}/members/${userId}`, {
+    method: "PATCH",
+    headers: authHeader(session.token),
+    body: JSON.stringify({ role }),
+  });
+}
+
+export function deleteMember(session: Session, userId: string): Promise<void> {
+  return apiRequest<void>(`/orgs/${session.orgId}/members/${userId}`, {
+    method: "DELETE",
+    headers: authHeader(session.token),
+  });
+}
+
+export function resetMemberPassword(
+  session: Session,
+  userId: string,
+): Promise<{ temporaryPassword: string }> {
+  return apiRequest<{ temporaryPassword: string }>(
+    `/orgs/${session.orgId}/members/${userId}/reset-password`,
+    { method: "POST", headers: authHeader(session.token) },
+  );
+}
+
+export type UpdateBookingInput = {
+  checkIn?: string;
+  checkOut?: string;
+  guests?: number;
+  unitId?: string;
+  guestNotes?: string;
+};
+
+export function patchBooking(
+  session: Session,
+  bookingId: string,
+  input: UpdateBookingInput,
+): Promise<ApiBooking> {
+  return apiRequest<ApiBooking>(
+    `/orgs/${session.orgId}/properties/${session.property.id}/bookings/${bookingId}`,
+    { method: "PATCH", headers: authHeader(session.token), body: JSON.stringify(input) },
+  );
+}

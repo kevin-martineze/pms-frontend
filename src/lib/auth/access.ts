@@ -13,8 +13,26 @@ import { mapMemberRole } from "@/lib/auth/roles";
  * escribiendo la URL. Ocultar el enlace no alcanzaba.
  */
 export const ROLE_ACCESS: Record<StaffRole, readonly Section[]> = {
-  owner: ["dashboard", "calendar", "reservations", "guests", "housekeeping", "rates", "reports"],
-  manager: ["dashboard", "calendar", "reservations", "guests", "housekeeping", "rates", "reports"],
+  owner: [
+    "dashboard",
+    "calendar",
+    "reservations",
+    "guests",
+    "housekeeping",
+    "rates",
+    "reports",
+    "settings",
+  ],
+  manager: [
+    "dashboard",
+    "calendar",
+    "reservations",
+    "guests",
+    "housekeeping",
+    "rates",
+    "reports",
+    "settings",
+  ],
   "front-desk": ["dashboard", "calendar", "reservations", "guests", "housekeeping"],
   housekeeping: ["housekeeping"],
   restaurant: ["dashboard"],
@@ -27,7 +45,9 @@ export type Section =
   | "guests"
   | "housekeeping"
   | "rates"
-  | "reports";
+  | "reports"
+  /** Inventario y equipo. Quien puede editarlo puede darse permisos a sí mismo. */
+  | "settings";
 
 /** `role` es el `MemberRole` crudo de la API (OWNER, FRONT_DESK, …). */
 export function canAccess(role: string, section: Section): boolean {

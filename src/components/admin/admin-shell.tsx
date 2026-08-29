@@ -13,6 +13,7 @@ import {
   LogOut,
   Lock,
   Menu,
+  Settings,
   Tags,
   Users,
 } from "lucide-react";
@@ -57,6 +58,7 @@ const NAV = [
   { key: "housekeeping", access: "housekeeping", href: "/admin/housekeeping", icon: BrushCleaning },
   { key: "rates", access: "rates", href: "/admin/rates", icon: Tags },
   { key: "reports", access: "reports", href: "/admin/reports", icon: ChartNoAxesColumn },
+  { key: "settings", access: "settings", href: "/admin/settings", icon: Settings },
 ] as const;
 
 type NavKey = (typeof NAV)[number]["key"];

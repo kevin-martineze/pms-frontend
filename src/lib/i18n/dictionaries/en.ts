@@ -428,6 +428,7 @@ export const en = {
       rates: "Rates",
       reports: "Reports",
       sections: "System sections",
+      settings: "Settings",
       property: "Property",
       outOfScope: "Outside this role's scope",
       viewAs: "View the system as…",
@@ -782,6 +783,90 @@ export const en = {
       details: "Technical detail",
     },
 
+
+    settings: {
+      title: "Settings",
+      lead: "The property's inventory and the people who work here. This is what lets the hotel run the system without calling the developer.",
+
+      inventoryTitle: "Rooms and room types",
+      inventoryLead:
+        "A type is what you sell and what carries the price. A room is the physical key you hand the guest. Rates and availability hang off the type; the door number lives on the room.",
+      newType: "New type",
+      noTypes: "No room types yet. Start with one — for example \"Standard Double\".",
+      noRooms: "No rooms in this type yet.",
+      addRoom: "Add room",
+      typeSummary: (price: string, guests: number, rooms: number) =>
+        `${price} per night · up to ${guests} guests · ${rooms} ${rooms === 1 ? "room" : "rooms"}`,
+      outOfService: "Out of service",
+
+      newTypeTitle: "New room type",
+      editTypeTitle: "Edit room type",
+      typeLead: "The base rate applies to any night no season covers.",
+      typeName: "Name",
+      typeNamePlaceholder: "Standard Double, Suite with terrace…",
+      typeDescription: "Description (optional)",
+      basePrice: "Base rate",
+      maxGuests: "Max guests",
+      beds: "Beds",
+      minNights: "Min. nights",
+      priceNote: "Prices go in without tax. The system adds it when quoting.",
+
+      newRoomTitle: "New room",
+      editRoomTitle: "Edit room",
+      roomLead: "The number or name the staff uses. It never shows on the public site.",
+      roomLabel: "Number or name",
+      roomType: "Type",
+      markOutOfService: "Out of service",
+      outOfServiceHelp: "Stops being sold. Bookings already taken are untouched.",
+
+      teamTitle: "The team",
+      teamLead:
+        "Who works here and what each person can see. Housekeeping only sees its board; reception does not see revenue.",
+      addMember: "Add someone",
+      addMemberTitle: "Add someone to the team",
+      addMemberLead: "We generate a temporary password and show it once.",
+      memberName: "Full name",
+      memberEmail: "Email",
+      memberRole: "Role",
+      create: "Create account",
+      you: "you",
+      locked: "Locked",
+      resetPassword: "New password",
+      removeMember: "Remove from team",
+      roles: {
+        OWNER: "Owner",
+        MANAGER: "Manager",
+        FRONT_DESK: "Reception",
+        HOUSEKEEPING: "Housekeeping",
+      },
+      roleChanged: (name: string) => `${name}'s role was updated.`,
+      memberRemoved: (name: string) => `${name} was removed from the team.`,
+      memberAddedExisting: (name: string) =>
+        `${name} already had an account and joined the team with it.`,
+
+      credentialsTitle: (name: string) => `Credentials for ${name}`,
+      credentialsLead: "Send these to them. Ask them to change the password on first login.",
+      temporaryPassword: "Temporary password",
+      credentialsWarning:
+        "This is the only time the password is shown. If it gets lost, generate a new one.",
+      copy: "Copy",
+      copied: "Copied",
+      copyFailed: "Could not copy. Select it by hand.",
+      done: "Done",
+
+      edit: "Edit",
+      delete: "Delete",
+      save: "Save",
+      saving: "Saving…",
+      cancel: "Cancel",
+      failed: "Could not save the change.",
+      typeCreated: "Room type created",
+      typeSaved: "Room type updated",
+      typeDeleted: (name: string) => `"${name}" deleted`,
+      roomCreated: "Room created",
+      roomSaved: "Room updated",
+      roomDeleted: (label: string) => `Room ${label} deleted`,
+    },
     noAccess: {
       title: "This section is not for your role",
       body: (section: string) =>
