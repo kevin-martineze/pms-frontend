@@ -70,7 +70,7 @@ export default async function BookPage({
       <div className="mx-auto max-w-3xl px-4 py-10 md:px-6 md:py-16">
         <header>
           <p className="eyebrow text-muted-foreground">{property.name}</p>
-          <h1 className="display-md mt-2 text-3xl md:text-4xl">{t.bookRequest.title}</h1>
+          <h1 className="display mt-2 text-3xl md:text-4xl">{t.bookRequest.title}</h1>
           <p className="mt-3 text-sm text-muted-foreground">{t.bookRequest.lead}</p>
         </header>
 

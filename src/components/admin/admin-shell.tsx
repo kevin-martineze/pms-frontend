@@ -160,7 +160,10 @@ export function AdminShell({
       {/* `h-dvh` + `overflow-hidden` fija el shell a la altura del viewport: sin
           esto el documento entero scrollea (el sidebar se va con el contenido)
           en vez de que el scroll quede contenido en `<main>`. */}
-      <div className="flex h-dvh overflow-hidden bg-background">
+      {/* `data-surface="admin"` cambia la tipografía de titulares a la sans para
+          todo el panel — ver `globals.css`. Una sola marca acá evita repetir la
+          decisión en cada pantalla. */}
+      <div data-surface="admin" className="flex h-dvh overflow-hidden bg-background">
         <SidebarNav
           allowed={allowed}
           className="hidden w-60 shrink-0 overflow-y-auto lg:flex"

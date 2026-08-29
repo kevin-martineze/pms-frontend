@@ -20,9 +20,9 @@
   --color-foreground: var(--foreground);
 
   --font-sans: var(--font-inter);
-  --font-display: var(--font-fraunces);
+  --font-display: var(--font-newsreader);
   --font-mono: var(--font-geist-mono);
-  --font-heading: var(--font-fraunces);
+  --font-heading: var(--font-newsreader);
 
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
@@ -240,20 +240,23 @@
 }
 
 @layer components {
-  /* Display editorial. Fraunces trae eje óptico: subirlo con el tamaño hace que
-     los titulares grandes aprieten en vez de inflarse. */
+  /* Display editorial. Newsreader trae eje óptico (6–72): subirlo con el tamaño
+     hace que los titulares grandes aprieten en vez de inflarse, y bajarlo en los
+     chicos les abre el ojo para que no se cierren. */
   .display {
     font-family: var(--font-display);
-    font-variation-settings: "SOFT" 0, "WONK" 0, "opsz" 100, "wght" 400;
-    line-height: 1.02;
-    letter-spacing: -0.025em;
+    font-variation-settings: "opsz" 60;
+    font-weight: 400;
+    line-height: 1.05;
+    letter-spacing: -0.018em;
   }
 
   .display-sm {
     font-family: var(--font-display);
-    font-variation-settings: "SOFT" 0, "WONK" 0, "opsz" 24, "wght" 500;
-    line-height: 1.15;
-    letter-spacing: -0.012em;
+    font-variation-settings: "opsz" 24;
+    font-weight: 500;
+    line-height: 1.18;
+    letter-spacing: -0.006em;
   }
 
   .eyebrow {
@@ -261,6 +264,31 @@
     font-weight: 500;
     letter-spacing: 0.18em;
     text-transform: uppercase;
+  }
+
+  /**
+   * El panel usa sans en todo, titulares incluidos.
+   *
+   * El sitio del huésped vende una sensación; el PMS muestra números en tablas
+   * un martes a las tres de la tarde. Una serif editorial en "Calendario de
+   * habitaciones" es decoración donde lo que hace falta es densidad y que las
+   * cifras se lean de un vistazo.
+   *
+   * Se hace redefiniendo la variable en la raíz del panel en vez de tocar cada
+   * componente: las clases `.display*` y los `h1..h3` ya apuntan a
+   * `--font-display`, así que cambiarla acá los alcanza a todos — y sigue
+   * valiendo para las pantallas que todavía no existen.
+   */
+  [data-surface="admin"] {
+    --font-display: var(--font-sans);
+  }
+
+  [data-surface="admin"] .display,
+  [data-surface="admin"] .display-sm {
+    /* Los ejes de la serif no significan nada en Inter, y `wght` fijado en la
+       clase pisaría el peso de Tailwind. */
+    font-variation-settings: normal;
+    letter-spacing: -0.011em;
   }
 
   .shell {
