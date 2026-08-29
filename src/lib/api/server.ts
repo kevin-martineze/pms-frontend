@@ -132,3 +132,79 @@ export function postTransition(
     { method: "POST", headers: authHeader(session.token) },
   );
 }
+
+// ---------------------------------------------------------------------------
+// Camarería
+// ---------------------------------------------------------------------------
+
+export type HousekeepingStatus = "DIRTY" | "CLEAN" | "INSPECTED";
+
+/** Lo que ve el tablero. La ocupación la deriva el servidor de las reservas. */
+export type HousekeepingRoom = {
+  unitId: string;
+  label: string;
+  unitTypeName: string;
+  active: boolean;
+  housekeepingStatus: HousekeepingStatus;
+  note: string | null;
+  state:
+    | "blocked"
+    | "departing"
+    | "occupied"
+    | "arriving"
+    | "vacant-dirty"
+    | "vacant-clean";
+  taskType: "departure" | "stayover" | "inspection" | null;
+  priority: "high" | "normal";
+  needsCleaning: boolean;
+  housekeeper: { id: string; name: string } | null;
+  guestName: string | null;
+};
+
+export type HousekeepingBoard = {
+  date: string;
+  summary: {
+    pending: number;
+    cleanedToday: number;
+    total: number;
+    highPriority: number;
+  };
+  rooms: HousekeepingRoom[];
+  cleaners: { id: string; name: string }[];
+};
+
+/**
+ * El día lo manda el cliente. El servidor de la API corre en UTC y no sabe en
+ * qué día está quien mira la pantalla; en Panamá (UTC-5) eso son cinco horas en
+ * las que el tablero mostraría el turno equivocado.
+ */
+export function getHousekeepingBoard(
+  session: Session,
+  date: string,
+): Promise<HousekeepingBoard> {
+  return apiRequest<HousekeepingBoard>(
+    `/orgs/${session.orgId}/properties/${session.property.id}/housekeeping?date=${date}`,
+    { headers: authHeader(session.token) },
+  );
+}
+
+export type HousekeepingUpdate = {
+  status?: HousekeepingStatus;
+  note?: string;
+  housekeeperId?: string | null;
+};
+
+export function patchHousekeeping(
+  session: Session,
+  unitId: string,
+  update: HousekeepingUpdate,
+): Promise<unknown> {
+  return apiRequest<unknown>(
+    `/orgs/${session.orgId}/properties/${session.property.id}/housekeeping/units/${unitId}`,
+    {
+      method: "PATCH",
+      headers: authHeader(session.token),
+      body: JSON.stringify(update),
+    },
+  );
+}

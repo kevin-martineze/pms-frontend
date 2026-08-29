@@ -629,7 +629,7 @@ export const es: Dictionary = {
     housekeeping: {
       title: "Camarería",
       lead: "El estado de cada habitación sale del calendario, no de una lista aparte. Cuando recepción registra una salida, la habitación aparece aquí sola.",
-      shift: "Turno de la mañana",
+      shift: "Trabajo de hoy",
       progress: (done, total) => `${done} de ${total} habitaciones listas`,
       highPriority: (n) =>
         n === 1
@@ -637,13 +637,19 @@ export const es: Dictionary = {
           : `${n} con huésped llegando hoy — van primero.`,
       window: "Entra huésped hoy · ventana 11:00 – 15:00",
       unassigned: "Sin asignar",
+      unassign: "Quitar asignación",
       markClean: "Marcar limpia",
+      markInspected: "Inspeccionada",
+      markDirty: "Marcar sucia",
       ready: "Lista",
       clean: "Limpia",
       cleanToast: (room) => `Habitación ${room} lista`,
       cleanToastBody: "Recepción ya la puede entregar.",
+      inspectedToast: (room) => `Habitación ${room} inspeccionada`,
+      dirtyToast: (room) => `Habitación ${room} marcada para limpiar`,
       assignToast: (room, name) => `Habitación ${room} asignada a ${name}`,
-      maintenanceNote: "Mantenimiento: cambio de aire acondicionado",
+      failed: "No se pudo guardar el cambio.",
+      empty: "Todavía no hay habitaciones cargadas en este alojamiento.",
     },
 
     rates: {

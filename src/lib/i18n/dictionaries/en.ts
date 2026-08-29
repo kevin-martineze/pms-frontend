@@ -619,7 +619,7 @@ export const en = {
     housekeeping: {
       title: "Housekeeping",
       lead: "Each room's state comes from the calendar, not from a separate list. When reception checks a guest out, the room shows up here on its own.",
-      shift: "Morning shift",
+      shift: "Today's work",
       progress: (done: number, total: number) => `${done} of ${total} rooms ready`,
       highPriority: (n: number) =>
         n === 1
@@ -627,13 +627,19 @@ export const en = {
           : `${n} with guests arriving today — those go first.`,
       window: "Guest arriving today · window 11:00 – 15:00",
       unassigned: "Unassigned",
+      unassign: "Clear assignment",
       markClean: "Mark clean",
+      markInspected: "Inspected",
+      markDirty: "Mark dirty",
       ready: "Ready",
       clean: "Clean",
       cleanToast: (room: string) => `Room ${room} ready`,
       cleanToastBody: "Reception can hand it over.",
+      inspectedToast: (room: string) => `Room ${room} inspected`,
+      dirtyToast: (room: string) => `Room ${room} flagged for cleaning`,
       assignToast: (room: string, name: string) => `Room ${room} assigned to ${name}`,
-      maintenanceNote: "Maintenance: air conditioning replacement",
+      failed: "Could not save the change.",
+      empty: "No rooms loaded for this property yet.",
     },
 
     rates: {
