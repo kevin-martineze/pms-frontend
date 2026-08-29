@@ -17,6 +17,21 @@ export function getBookings(
   );
 }
 
+/**
+ * Solicitudes pendientes de confirmar, **sin ventana de fechas**.
+ *
+ * A propósito no se filtra por rango: una solicitud del sitio puede ser para
+ * dentro de seis meses, y el dashboard mira sólo las próximas dos semanas. Si
+ * se filtrara igual que el resto, la que hay que atender hoy sería justo la que
+ * no se ve.
+ */
+export function getPendingBookings(session: Session): Promise<ApiBooking[]> {
+  return apiRequest<ApiBooking[]>(
+    `/orgs/${session.orgId}/properties/${session.property.id}/bookings?status=PENDING`,
+    { headers: authHeader(session.token) },
+  );
+}
+
 export function getUnits(session: Session): Promise<ApiUnit[]> {
   return apiRequest<ApiUnit[]>(
     `/orgs/${session.orgId}/properties/${session.property.id}/units`,

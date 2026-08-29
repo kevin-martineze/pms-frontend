@@ -558,6 +558,13 @@ export const es: Dictionary = {
       arrivals: "Llegan hoy",
       departures: "Salen hoy",
       noArrivals: "Nadie llega hoy.",
+      requestsTitle: "Solicitudes del sitio",
+      requestsLead:
+        "Entraron por la web y esperan respuesta. La habitación queda apartada 48 horas.",
+      accept: "Aceptar",
+      decline: "Rechazar",
+      requestAccepted: (name) => `Se aceptó la reserva de ${name}. Escribile para coordinar el pago.`,
+      requestDeclined: (name) => `Se rechazó la solicitud de ${name}.`,
       noDepartures: "Nadie sale hoy.",
       checkIn: "Check-in",
       checkOut: "Check-out",

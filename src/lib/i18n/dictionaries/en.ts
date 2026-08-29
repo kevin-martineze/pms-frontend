@@ -545,6 +545,14 @@ export const en = {
       arrivals: "Arriving today",
       departures: "Departing today",
       noArrivals: "Nobody arrives today.",
+      requestsTitle: "Requests from the website",
+      requestsLead:
+        "These came in through the site and are waiting for an answer. The room is held for 48 hours.",
+      accept: "Accept",
+      decline: "Decline",
+      requestAccepted: (name: string) =>
+        `${name}'s booking was accepted. Write to them to arrange payment.`,
+      requestDeclined: (name: string) => `${name}'s request was declined.`,
       noDepartures: "Nobody leaves today.",
       checkIn: "Check in",
       checkOut: "Check out",

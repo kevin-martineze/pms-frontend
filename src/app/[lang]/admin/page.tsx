@@ -7,7 +7,8 @@ import { StatCard } from "@/components/admin/stat-card";
 import { TodayLists } from "@/components/admin/today-lists";
 import { LocaleLink } from "@/components/locale-link";
 import { NoAccess } from "@/components/admin/no-access";
-import { getBookings, getUnits } from "@/lib/api/server";
+import { PendingRequests } from "@/components/admin/pending-requests";
+import { getBookings, getPendingBookings, getUnits } from "@/lib/api/server";
 import { canAccess } from "@/lib/auth/access";
 import { getSession } from "@/lib/auth/server-session";
 import { toReservation } from "@/lib/bookings/mapper";
@@ -39,14 +40,19 @@ export default async function AdminDashboard() {
 
   const today = toIsoDate(new Date());
 
-  const [units, bookings] = await Promise.all([
+  const [units, bookings, pending] = await Promise.all([
     getUnits(session),
     /* Ventana amplia: el ingreso de 30 días y la tira de ocupación miran atrás,
        las llegadas miran adelante. */
     getBookings(session, { from: addDays(today, -35), to: addDays(today, 15) }),
+    /* Las solicitudes van aparte y SIN ventana: una del sitio puede ser para
+       dentro de seis meses, y quedaría fuera del rango de arriba justo cuando
+       es la que hay que contestar hoy. */
+    getPendingBookings(session),
   ]);
 
   const reservations = bookings.map(toReservation);
+  const requests = pending.map(toReservation);
   const totalRooms = units.length;
 
   const arrivals = arrivalsOn(reservations, today);
@@ -126,6 +132,14 @@ export default async function AdminDashboard() {
           icon={<BedDouble className="size-4" aria-hidden />}
         />
       </div>
+
+      {/* Arriba de las llegadas: una solicitud sin responder tiene reloj —48
+          horas— y las llegadas del día no. Lo que vence primero se ve primero. */}
+      {requests.length > 0 && (
+        <div className="mt-6">
+          <PendingRequests requests={requests} />
+        </div>
+      )}
 
       <div className="mt-6">
         <TodayLists arrivals={arrivals} departures={departures} />
